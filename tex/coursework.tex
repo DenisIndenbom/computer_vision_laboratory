@@ -1,0 +1,212 @@
+\documentclass[a4paper,12pt]{extarticle}
+\usepackage{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=english,russian]{babel}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{colortbl}
+\usepackage{tikz}
+\usepackage{pgf}
+\usepackage{subcaption}
+\usepackage{listings}
+\usepackage{indentfirst}
+\usepackage[
+backend=biber,
+style=numeric,
+urldate=long,
+maxbibnames=99
+]{biblatex}
+\addbibresource{refs.bib}
+\usepackage[colorlinks,citecolor=blue,linkcolor=blue,bookmarks=false,hypertexnames=true, urlcolor=blue]{hyperref} 
+\usepackage{indentfirst}
+\usepackage{mathtools}
+\usepackage{booktabs}
+\usepackage[flushleft]{threeparttable}
+\usepackage{tablefootnote}
+
+\usepackage{chngcntr}
+\counterwithin{table}{section}
+\counterwithin{figure}{section}
+
+\graphicspath{{graphics/}}
+
+\makeatletter
+\makeatother
+
+\geometry{left=2.5cm}
+\geometry{right=1.0cm}
+\geometry{top=2.0cm}
+\geometry{bottom=2.0cm}
+\setlength{\parindent}{1.25cm}
+\renewcommand{\baselinestretch}{1.5}
+
+\newcommand{\bibref}[3]{\hyperlink{#1}{#2 (#3)}}
+\addto\captionsrussian{\def\refname{Список литературы}}
+
+\renewcommand{\theenumi}{\arabic{enumi}}
+\renewcommand{\labelenumi}{\arabic{enumi}}
+\renewcommand{\theenumii}{.\arabic{enumii}}
+\renewcommand{\labelenumii}{\arabic{enumi}.\arabic{enumii}.}
+\renewcommand{\theenumiii}{.\arabic{enumiii}}
+\renewcommand{\labelenumiii}{\arabic{enumi}.\arabic{enumii}.\arabic{enumiii}.}
+
+\begin{document}
+\input{title_kr}
+\newpage
+\setcounter{page}{2}
+
+{
+	\hypersetup{linkcolor=black}
+	\tableofcontents
+}
+
+\newpage
+
+\section*{Abstract} 
+\addcontentsline{toc}{section}{Abstract}
+
+This project plan addresses the problem of domain shift in computer vision, specifically focusing on the transition from high-quality synthetic and studio-grade image data to real-world user-generated photographs with variable quality. The work aims to develop a unified data collection and annotation protocol, implement baseline classification and object detection models (ResNet, YOLOv8, Vision Transformer), and systematically evaluate model robustness under diverse environmental factors including noise, brightness variations, shadows, blur, and viewpoint changes. A comparative analysis will be conducted to assess model performance degradation across domains. The planned deliverables include a curated dataset, a unified repository of experimental results, and a scientific report detailing the methodology and findings. The expected outcomes will contribute to understanding domain adaptation challenges and provide benchmarks for robust vision system development.
+
+\section*{\foreignlanguage{russian}{Аннотация}}   
+\addcontentsline{toc}{section}{Аннотация}
+\foreignlanguage{russian}{
+    Данный план проекта посвящён проблеме смещения доменов в компьютерном зрении, в частности переходу от синтетических и студийных изображений высокого качества к пользовательским фотографиям с переменным качеством. Цель работы — разработка унифицированного протокола сбора и разметки данных, реализация базовых моделей классификации и детекции объектов (ResNet, YOLOv8, Vision Transformer), а также систематическая оценка устойчивости моделей к различным факторам среды: шуму, яркости, теням, размытости и изменению углов обзора. Будет проведён сравнительный анализ производительности моделей в разных доменах. Запланированные результаты включают отчётный датасет, репозиторий с экспериментами и научный отчёт с описанием методики и выводов. Ожидается, что работа внесёт вклад в понимание проблем адаптации доменов и предоставит эталоны для разработки устойчивых систем компьютерного зрения.
+}
+
+\section*{Keywords}
+\addcontentsline{toc}{section}{Keywords}
+Domain Adaptation, Synthetic-to-Real, Robustness, Computer Vision, Data Annotation, YOLOv8, Vision Transformer, Environmental Factors, Benchmark Dataset
+
+\newpage
+
+\section{Introduction}
+\label{sec:introduction}
+
+\subsection{Problem Relevance}
+Computer vision models often fail when deployed in real-world conditions due to the domain gap between controlled training data (synthetic/studio) and unpredictable user-generated content. This project systematically analyses the synthetic-to-real shift, focusing on robustness against common image quality degradations.
+
+\subsection{Problem Statement}
+The research question is: \textit{To what extent do state-of-the-art vision models degrade when applied to data with realistic environmental distortions, and how can this degradation be measured?}
+
+\subsection{Project Objectives}
+\begin{enumerate}
+    \item Develop a protocol for cross-domain robustness studies.
+    \item Implement baseline models (ResNet, ViT, YOLOv8) on high-quality source data.
+    \item Simulate environmental degradations to create target domain variants.
+    \item Evaluate and compare model performance across domains.
+    \item Create a public benchmark dataset and code repository.
+    \item Document methodology and results in a scientific report.
+\end{enumerate}
+
+\subsection{Task Distribution}
+Individual project. All tasks are performed by the author.
+
+\section{Literature Review}
+\label{sec:litreview}
+
+Domain adaptation methods include domain-invariant feature learning \cite{tzeng2017adversarial} and adversarial training \cite{ganin2016domain}. Synthetic-to-real transfer often uses simulation or generative models \cite{richter2016playing, shrivastava2017learning}. Vision Transformers \cite{dosovitskiy2020image} show strong performance but their robustness to quality degradation is understudied. Benchmarks like ImageNet-C \cite{hendrycks2019benchmarking} test corruption robustness but not specifically synthetic-to-real shift with user-photography artifacts. This project aims to fill that gap.
+
+\section{Detailed Work Plan}
+\label{sec:workplan}
+The project is divided into five sequential phases.
+
+\subsection{Phase 1: Data Protocol Development}
+\begin{itemize}
+    \item Design unified annotation protocol (JSON format).
+    \item Collect source data (synthetic/studio) and target data (user-generated).
+    \item Annotate ~2000 images using LabelImg/CVAT.
+    \item \textbf{Deliverable:} Protocol document and initial dataset split.
+\end{itemize}
+
+\subsection{Phase 2: Model Implementation}
+\begin{itemize}
+    \item Fine-tune ResNet-50 and ViT-B/16 for classification.
+    \item Train YOLOv8s for detection on source domain.
+    \item Establish baseline metrics on validation set.
+    \item \textbf{Deliverable:} Trained weights and baseline report.
+\end{itemize}
+
+\subsection{Phase 3: Degradation Simulation}
+\begin{itemize}
+    \item Implement degradation pipelines (OpenCV, Albumentations):
+    \begin{itemize}
+        \item Gaussian noise, brightness/contrast changes.
+        \item Synthetic shadows, blur, perspective transforms.
+    \end{itemize}
+    \item Generate degraded test sets with controlled severity.
+    \item \textbf{Deliverable:} Script library and degraded test images.
+\end{itemize}
+
+\subsection{Phase 4: Experiments and Analysis}
+\begin{itemize}
+    \item Evaluate all models on: pristine source, original target, and degraded subsets.
+    \item Record accuracy, mAP@0.5, inference time.
+    \item Analyze performance drops per model and per degradation factor.
+    \item Compare CNN vs. Transformer robustness.
+    \item \textbf{Deliverable:} Results in CSV and analysis report.
+\end{itemize}
+
+\subsection{Phase 5: Repository and Reporting}
+\begin{itemize}
+    \item Create public GitHub repository with code and documentation.
+    \item Package dataset for open release (CC-BY).
+    \item Write final project report.
+    \item Prepare arXiv preprint.
+    \item \textbf{Deliverable:} Public repo, dataset, report, preprint.
+\end{itemize}
+
+\section{Expected Outcomes and Significance}
+\label{sec:expected}
+
+\subsection{Expected Outcomes}
+\begin{enumerate}
+    \item Unified data protocol for synthetic-to-real robustness studies.
+    \item Benchmark models (ResNet-50, ViT-B/16, YOLOv8s) with baseline performance.
+    \item Quantitative robustness analysis (example format in Table \ref{tab:expected_results}).
+    \item Public dataset with annotations and degradation code.
+    \item Reproducible code repository.
+    \item Scientific report/preprint.
+\end{enumerate}
+
+\begin{table}[ht]
+    \caption{Anticipated results format (placeholder values).}
+    \label{tab:expected_results}
+    \footnotesize
+    \centering
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{Test Condition} & \textbf{ResNet-50} & \textbf{ViT-B/16} & \textbf{YOLOv8s} \\
+        \midrule
+        Source Domain (Pristine) & 94.5\% & 96.1\% & 0.89 \\
+        Target Domain (Original) & 78.2\% & 82.5\% & 0.71 \\
+        + Gaussian Noise ($\sigma=0.1$) & 70.1\% & 75.3\% & 0.65 \\
+        + Brightness (-50\%) & 65.4\% & 72.8\% & 0.60 \\
+        + Motion Blur & 58.9\% & 68.2\% & 0.52 \\
+        \textbf{Combined} & \textbf{45.2\%} & \textbf{55.7\%} & \textbf{0.38} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Significance}
+\begin{itemize}
+    \item \textbf{Scientific:} Systematic comparison of modern architectures under realistic domain shift.
+    \item \textbf{Practical:} Guides model selection for unpredictable input quality.
+    \item \textbf{Open Science:} Fully reproducible benchmark for future research.
+\end{itemize}
+
+\subsection{Risks and Mitigation}
+\begin{itemize}
+    \item \textbf{Insufficient data:} Use multiple public datasets and pre-trained models.
+    \item \textbf{Scope too large:} Prioritize core degradations; modular pipeline.
+    \item \textbf{Annotation effort:} Focus on fewer object categories.
+\end{itemize}
+
+\newpage 
+\printbibliography[heading=bibintoc]
+
+\end{document}
