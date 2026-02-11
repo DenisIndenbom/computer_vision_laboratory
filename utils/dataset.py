@@ -12,6 +12,7 @@ class BaseImageFolderDataset(Dataset):
     URL: str = ''
     ARCHIVE_NAME: str = ''
     EXTRACTED_FOLDER: str = ''
+    PROXY: dict = {}
 
     def __init__(
         self,
@@ -72,12 +73,13 @@ class BaseImageFolderDataset(Dataset):
         total_str = cls._bytes_to_human(total_size)
         percent = min(100, (downloaded * 100) / total_size)
 
-        print(f'\rProgress: {percent:.1f}% ({downloaded_str} / {total_str})',
-              end='',
-              flush=True)
+        line = f'\rProgress: {percent:.1f}% ({downloaded_str} / {total_str})'
 
         if percent >= 100:
-            print(f'\nDownload complete! Total: {total_str}')
+            print(f'{line:<100}', flush=True)
+            print(f'Download complete! Total: {total_str}')
+        else:
+            print(f'{line:<100}', end='', flush=True)
 
     def _extract_archive(self, archive_path: str):
         if archive_path.endswith('.zip'):
@@ -99,9 +101,13 @@ class BaseImageFolderDataset(Dataset):
         archive_path = os.path.join(self.root, self.ARCHIVE_NAME)
 
         if not os.path.exists(self.dataset_dir):
-
             if not os.path.exists(archive_path):
                 print(f'Downloading {self.__class__.__name__}...')
+
+                proxy_handler = request.ProxyHandler(self.PROXY)
+                opener = request.build_opener(proxy_handler)
+                request.install_opener(opener)
+
                 request.urlretrieve(self.URL, archive_path, self._reporthook)
 
             print(f'Extracting {self.__class__.__name__}...')
