@@ -70,7 +70,7 @@ maxbibnames=99
 \section*{Abstract} 
 \addcontentsline{toc}{section}{Abstract}
 
-This project plan addresses the problem of domain shift in computer vision, specifically focusing on the transition from high-quality synthetic and studio-grade image data to real-world user-generated photographs with variable quality. The work aims to develop a unified data collection and annotation protocol, implement baseline classification and object detection models (ResNet, YOLOv8, Vision Transformer), and systematically evaluate model robustness under diverse environmental factors including noise, brightness variations, shadows, blur, and viewpoint changes. A comparative analysis will be conducted to assess model performance degradation across domains. The planned deliverables include a curated dataset, a unified repository of experimental results, and a scientific report detailing the methodology and findings. The expected outcomes will contribute to understanding domain adaptation challenges and provide benchmarks for robust vision system development.
+This project plan addresses the problem of domain shift in computer vision, specifically focusing on the transition from high-quality synthetic and studio-grade image data to real-world user-generated photographs with variable quality. The work aims to develop a unified data collection and annotation protocol, implement baseline classification and object detection models (ResNet, YOLOv8, Vision Transformer), and systematically evaluate model robustness under diverse environmental factors including noise, brightness variations, shadows, blur, and viewpoint changes. A comparative analysis will be conducted to assess model performance degradation across domains. The planned deliverables include a curated dataset, a unified repository of experimental results, and a course work detailing the methodology and findings. The expected outcomes will contribute to understanding domain adaptation challenges and provide benchmarks for robust vision system development.
 
 \section*{\foreignlanguage{russian}{Аннотация}}   
 \addcontentsline{toc}{section}{Аннотация}
@@ -100,16 +100,16 @@ The research question is: \textit{To what extent do state-of-the-art vision mode
     \item Simulate environmental degradations to create target domain variants.
     \item Evaluate and compare model performance across domains.
     \item Create a public benchmark dataset and code repository.
-    \item Document methodology and results in a scientific report.
+    \item Document methodology and results in a course work.
 \end{enumerate}
 
 \subsection{Task Distribution}
-Individual project. All tasks are performed by the author.
+Individual project.
 
 \section{Literature Review}
 \label{sec:litreview}
 
-Domain adaptation methods include domain-invariant feature learning \cite{tzeng2017adversarial} and adversarial training \cite{ganin2016domain}. Synthetic-to-real transfer often uses simulation or generative models \cite{richter2016playing, shrivastava2017learning}. Vision Transformers \cite{dosovitskiy2020image} show strong performance but their robustness to quality degradation is understudied. Benchmarks like ImageNet-C \cite{hendrycks2019benchmarking} test corruption robustness but not specifically synthetic-to-real shift with user-photography artifacts. This project aims to fill that gap.
+Domain adaptation methods include domain-invariant feature learning \cite{tzeng2017adversarial} and adversarial training \cite{ganin2016domain}. Synthetic-to-real transfer often uses simulation or generative models \cite{richter2016playing, shrivastava2017learning}. Vision Transformers \cite{dosovitskiy2020image} show strong performance but their robustness to quality degradation is understudied. Benchmarks like ImageNet-C \cite{hendrycks2019benchmarking} test corruption robustness but not specifically synthetic-to-real shift with user-photography artifacts.
 
 \section{Detailed Work Plan}
 \label{sec:workplan}
@@ -119,8 +119,7 @@ The project is divided into five sequential phases.
 \begin{itemize}
     \item Design unified annotation protocol (JSON format).
     \item Collect source data (synthetic/studio) and target data (user-generated).
-    \item Annotate ~2000 images using LabelImg/CVAT.
-    \item \textbf{Deliverable:} Protocol document and initial dataset split.
+    \item Annotate ~500-1000 images using LabelImg/CVAT.
 \end{itemize}
 
 \subsection{Phase 2: Model Implementation}
@@ -128,36 +127,30 @@ The project is divided into five sequential phases.
     \item Fine-tune ResNet-50 and ViT-B/16 for classification.
     \item Train YOLOv8s for detection on source domain.
     \item Establish baseline metrics on validation set.
-    \item \textbf{Deliverable:} Trained weights and baseline report.
 \end{itemize}
 
 \subsection{Phase 3: Degradation Simulation}
 \begin{itemize}
-    \item Implement degradation pipelines (OpenCV, Albumentations):
+    \item Implement degradation pipelines (OpenCV):
     \begin{itemize}
         \item Gaussian noise, brightness/contrast changes.
         \item Synthetic shadows, blur, perspective transforms.
     \end{itemize}
     \item Generate degraded test sets with controlled severity.
-    \item \textbf{Deliverable:} Script library and degraded test images.
 \end{itemize}
 
 \subsection{Phase 4: Experiments and Analysis}
 \begin{itemize}
     \item Evaluate all models on: pristine source, original target, and degraded subsets.
-    \item Record accuracy, mAP@0.5, inference time.
     \item Analyze performance drops per model and per degradation factor.
-    \item Compare CNN vs. Transformer robustness.
-    \item \textbf{Deliverable:} Results in CSV and analysis report.
+    \item Compare CNN, Transformer and hybrid (CNN + Transformer) robustness.
 \end{itemize}
 
 \subsection{Phase 5: Repository and Reporting}
 \begin{itemize}
     \item Create public GitHub repository with code and documentation.
-    \item Package dataset for open release (CC-BY).
+    \item Package dataset for open access.
     \item Write final project report.
-    \item Prepare arXiv preprint.
-    \item \textbf{Deliverable:} Public repo, dataset, report, preprint.
 \end{itemize}
 
 \section{Expected Outcomes and Significance}
@@ -170,7 +163,7 @@ The project is divided into five sequential phases.
     \item Quantitative robustness analysis (example format in Table \ref{tab:expected_results}).
     \item Public dataset with annotations and degradation code.
     \item Reproducible code repository.
-    \item Scientific report/preprint.
+    \item Write a course work document.
 \end{enumerate}
 
 \begin{table}[ht]
