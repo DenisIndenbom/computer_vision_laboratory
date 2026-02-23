@@ -60,6 +60,8 @@ class BaseImageFolderDataset(Dataset):
             if bytes_value < 1024 or unit == 'TB':
                 return f'{bytes_value:.2f} {unit}'
             bytes_value /= 1024
+            
+        return ''
 
     @classmethod
     def _reporthook(cls, count, block_size, total_size):
