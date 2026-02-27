@@ -1,3 +1,5 @@
+from os import path
+
 import torch
 import torch.nn as nn
 
@@ -14,6 +16,8 @@ def train(model: nn.Module,
           optimizer: Optimizer,
           criterion: nn.Module,
           epochs: int,
+          checkpoint_interval: int = 5,
+          checkpoint_path: str = '.',
           device: torch.device = torch.device('cpu'),
           verbose: bool = True) -> dict[str, list[float]]:
     """
@@ -26,6 +30,8 @@ def train(model: nn.Module,
         optimizer: Optimizer for updating model weights.
         criterion: Loss function.
         epochs: Number of training epochs.
+        checkpoint_interval: Interval of epochs for saving the model
+        checkpoint_path: Path for saving the model
         device: Device on which to perform computation.
         verbose: If True, print per-epoch metrics.
 
@@ -46,6 +52,9 @@ def train(model: nn.Module,
         'val_acc1': [],
         'val_acc5': []
     }
+
+    # Store model name
+    model_name = type(model).__name__
 
     for epoch in range(1, epochs + 1):
         model.train()
@@ -108,6 +117,15 @@ def train(model: nn.Module,
                   f'Train Loss: {avg_train_loss:.4f} | Train Acc1: {avg_train_acc1:.2f}% | Train Acc5: {avg_train_acc5:.2f}% | '
                   f'Val Loss: {avg_val[0]:.4f} | Val Acc1: {avg_val[1]:.2f}% | Val Acc5: {avg_val[2]:.2f}%')
 
+        # Save chekcpoint if interval
+        if epoch % checkpoint_interval == 0:
+            print('Saving checkpoint...', end='')
+            torch.save(model.state_dict(),
+                       path.join(checkpoint_path, f'{model_name}_checkpoint_{epoch}.model'))
+            torch.save(optimizer.state_dict(),
+                       path.join(checkpoint_path, f'{model_name}_checkpoint_{epoch}.optim'))
+            print('OK')
+
     return history
 
 
@@ -139,7 +157,7 @@ def validate(model: nn.Module,
     val_loop = tqdm(
         dataloader, desc=f'Epoch {epoch}/{epochs} [Val]', leave=False)
     with torch.no_grad():
-        for x_batch, y_batch in tqdm(dataloader, desc='Validation'):
+        for x_batch, y_batch in val_loop:
             x_batch = x_batch.to(device)
             y_batch = y_batch.to(device)
 
