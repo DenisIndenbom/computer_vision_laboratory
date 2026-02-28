@@ -1,0 +1,4 @@
+modifyLineBreaks:
+  textWrapOptions:
+    wrap: 1
+    columns: 120
