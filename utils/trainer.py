@@ -1,3 +1,5 @@
+import json
+
 from os import path
 
 import torch
@@ -16,12 +18,13 @@ def train(model: nn.Module,
           optimizer: Optimizer,
           criterion: nn.Module,
           epochs: int,
+          start_epoch: int = 0,
           checkpoint_interval: int = 5,
           checkpoint_path: str = '.',
           device: torch.device = torch.device('cpu'),
           verbose: bool = True) -> dict[str, list[float]]:
     """
-    Train the model for a given number of epochs, evaluating on the validation set after each epoch.
+    Train the classification model for a given number of epochs, evaluating on the validation set after each epoch.
 
     Args:
         model: Neural network model.
@@ -30,6 +33,7 @@ def train(model: nn.Module,
         optimizer: Optimizer for updating model weights.
         criterion: Loss function.
         epochs: Number of training epochs.
+        start_epoch: Epoch number to resume training from.
         checkpoint_interval: Interval of epochs for saving the model
         checkpoint_path: Path for saving the model
         device: Device on which to perform computation.
@@ -40,9 +44,6 @@ def train(model: nn.Module,
         - 'train_loss', 'train_acc1', 'train_acc5'
         - 'val_loss', 'val_acc1', 'val_acc5'
     """
-    # Move model to device
-    model.to(device)
-
     # History storage
     history = {
         'train_loss': [],
@@ -56,7 +57,21 @@ def train(model: nn.Module,
     # Store model name
     model_name = type(model).__name__
 
-    for epoch in range(1, epochs + 1):
+    # Move model to device
+    model.to(device)
+
+    # Load checkpoint if specified
+    if start_epoch > 0:
+        print('Loading checkpoint...', end='')
+        model.load_state_dict(
+            torch.load(path.join(checkpoint_path, f'{model_name}_checkpoint_{start_epoch}.model')))
+        optimizer.load_state_dict(
+            torch.load(path.join(checkpoint_path, f'{model_name}_checkpoint_{start_epoch}.optim')))
+        with open(path.join(checkpoint_path, f'{model_name}_checkpoint_{start_epoch}.metrics'), 'r') as file:
+            history = json.load(file)
+        print('OK')
+
+    for epoch in range(start_epoch + 1, epochs + 1):
         model.train()
         total_loss = 0.0
         acc1 = 0.0
@@ -124,6 +139,8 @@ def train(model: nn.Module,
                        path.join(checkpoint_path, f'{model_name}_checkpoint_{epoch}.model'))
             torch.save(optimizer.state_dict(),
                        path.join(checkpoint_path, f'{model_name}_checkpoint_{epoch}.optim'))
+            with open(path.join(checkpoint_path, f'{model_name}_checkpoint_{epoch}.metrics'), 'w') as file:
+                json.dump(history, file)
             print('OK')
 
     return history
@@ -136,7 +153,7 @@ def validate(model: nn.Module,
              epoch: int = 1,
              epochs: int = 1) -> tuple[float, float, float]:
     """
-    Evaluate the model on a validation set.
+    Evaluate the classification model on a validation set.
 
     Args:
         model: Neural network model.
@@ -183,3 +200,48 @@ def validate(model: nn.Module,
     avg_acc5 = acc5 / num_batches
 
     return avg_loss, avg_acc1, avg_acc5
+
+
+def test(model: nn.Module,
+         dataloader: DataLoader,
+         device: torch.device = torch.device('cpu')) -> tuple[float, float]:
+    """
+    Evaluate the classification model on a test set.
+
+    Args:
+        model: Neural network model.
+        dataloader: DataLoader supplying test batches.
+        device: Device on which to perform computation.
+
+    Returns:
+        Tuple of (top‑1 accuracy, top‑5 accuracy) on the test set.
+    """
+    model.eval()
+    acc1 = 0.0
+    acc5 = 0.0
+
+    test_loop = tqdm(dataloader, desc='[Test]', leave=False)
+    with torch.no_grad():
+        for x_batch, y_batch in test_loop:
+            x_batch = x_batch.to(device)
+            y_batch = y_batch.to(device)
+
+            # Forward pass
+            pred = model(x_batch)
+
+            # Update metrics
+            acc = accuracy(pred, y_batch)
+            acc1 += float(acc[0]) if not torch.is_tensor(acc[0]
+                                                         ) else acc[0].item()
+            acc5 += float(acc[1]) if not torch.is_tensor(acc[1]
+                                                         ) else acc[1].item()
+
+            test_loop.set_postfix(
+                acc1=acc[0].item() if torch.is_tensor(acc[0]) else acc[0])
+
+    # Average over number of batches
+    num_batches = len(dataloader)
+    avg_acc1 = acc1 / num_batches
+    avg_acc5 = acc5 / num_batches
+
+    return avg_acc1, avg_acc5
