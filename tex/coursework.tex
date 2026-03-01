@@ -107,8 +107,9 @@ training data (synthetic/studio) and unpredictable user-generated content. This 
 synthetic-to-real shift, focusing on robustness against common image quality degradations.
 
 \subsection{Problem Statement}
-The research question is: \textit{To what extent do state-of-the-art vision models degrade when applied to data with
-	realistic environmental distortions, and how can this degradation be measured?}
+The research investigates the robustness of modern computer vision models under synthetic-to-real domain shift,
+focusing on how environmental distortions affect classification performance. The goal is to quantify performance
+degradation across domains and explore reliable ways to measure cross-domain generalization.
 
 \subsection{Project Objectives}
 \begin{enumerate}
@@ -139,7 +140,7 @@ The project is divided into five sequential phases.
 
 \subsection{Phase 1: Methods Research \& Dataset Search}
 \begin{itemize}
-	\item Review methods for domain adaptation and domain transitions.
+	\item Review methods for domain adaptation.
 	\item Indentify suitable datasets with source domain (synthetic/studio) and target domain (user-generated).
 	\item Analyze domain gaps and document key challenges.
 \end{itemize}
@@ -249,6 +250,62 @@ The project is divided into five sequential phases.
 \end{itemize}
 
 \newpage
+
+\section{Methods Research \& Dataset Search}
+\subsection{Methods of Domain Adaptation}
+Several domain adaptation approaches have been proposed in computer vision, with Maximum Mean Discrepancy (MMD)
+\cite{hu2015deep}, CORAL \cite{hu2015deep} and DANN \cite{ganin2016domain} among the most widely used in classification
+tasks. This work focuses on the study and application of these strategies.
+
+\subsubsection{MMD}
+Maximum Mean Discrepancy (MMD) is a non-parametric distance metric used to measure the distribution difference between
+source and target domains in a reproducing kernel Hilbert space (RKHS). The main idea is to minimize the discrepancy
+between feature representations of two domains during training.
+
+Given source domain samples $X_s=\{x_i^s\}_{i=1}^{n_s}$ and target domain samples $X_t=\{x_j^t\}_{j=1}^{n_t}$, the
+squared MMD distance is defined as
+
+\[
+	\text{MMD}^2(X_s,X_t)=\left\|\frac{1}{n_s}\sum_{i=1}^{n_s}\phi(x_i^s)-\frac{1}{n_t}\sum_{j=1}^{n_t}\phi(x_j^t)\right\|_{\mathcal{H}}^2
+\]
+
+where $\phi(\cdot)$ is a feature mapping function into RKHS $\mathcal{H}$. In practice, kernel functions such as
+Gaussian RBF kernel are used to compute MMD efficiently.
+
+\subsubsection{CORAL}
+Correlation Alignment (CORAL) is a domain adaptation method that aligns the second-order statistics of source and
+target feature distributions by minimizing the difference between their covariance matrices.
+
+Let $C_s$ and $C_t$ denote the covariance matrices of source and target features respectively. The CORAL loss is
+defined as
+
+\[
+	\mathcal{L}_{CORAL}=\frac{1}{4d^2}\|C_s-C_t\|_F^2
+\]
+
+where $d$ is the feature dimension and $\|\cdot\|_F$ denotes the Frobenius norm. By matching covariance statistics,
+CORAL reduces domain shift while keeping feature representations discriminative.
+
+\subsubsection{DANN}
+Domain-Adversarial Neural Networks (DANN) is an adversarial learning framework that aims to learn domain-invariant
+feature representations using a gradient reversal layer.
+
+The objective function consists of two parts: classification loss and domain discrimination loss:
+
+\[
+	\mathcal{L}=\mathcal{L}_y(\hat{y},y)-\lambda \mathcal{L}_d(\hat{d},d)
+\]
+
+where $\mathcal{L}_y$ is the task-specific loss (e.g., cross-entropy loss), $\mathcal{L}_d$ is the domain
+classification loss, and $\lambda$ is a trade-off hyperparameter. The gradient reversal layer multiplies the gradient
+by $-1$ during backpropagation to enforce domain confusion and promote domain-invariant features.
+
+\subsection{Suitable Dataset}
+\subsection{Key Challenges}
+
+\section{Model Implementation}
+
+% TODO: Fill this section
 
 \newpage
 \printbibliography[heading=bibintoc]
