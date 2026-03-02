@@ -167,8 +167,6 @@ The project is divided into five sequential phases.
 	\item Analyze convergence behavior and adaptation stability across domains.
 \end{itemize}
 
-\newpage
-
 \subsection{Phase 4: Experiments and Analysis}
 \begin{itemize}
 	\item Evaluate baseline and adapted models on source and target domains.
@@ -249,13 +247,11 @@ The project is divided into five sequential phases.
 	\item \textbf{Computational constraints:} Use smaller batch sizes, partial fine-tuning, or frozen backbones where necessary.
 \end{itemize}
 
-\newpage
-
 \section{Methods Research \& Dataset Search}
 \subsection{Methods of Domain Adaptation}
 Several domain adaptation approaches have been proposed in computer vision, with Maximum Mean Discrepancy (MMD)
-\cite{hu2015deep}, CORAL \cite{hu2015deep} and DANN \cite{ganin2016domain} among the most widely used in classification
-tasks. This work focuses on the study and application of these strategies.
+\cite{gretton2012kernel}, CORAL \cite{sun2016deep} and DANN \cite{long2015learning} among the most widely used in
+classification tasks. This work focuses on the study and application of these strategies.
 
 \subsubsection{MMD}
 Maximum Mean Discrepancy (MMD) is a non-parametric distance metric used to measure the distribution difference between
@@ -300,12 +296,64 @@ where $\mathcal{L}_y$ is the task-specific loss (e.g., cross-entropy loss), $\ma
 classification loss, and $\lambda$ is a trade-off hyperparameter. The gradient reversal layer multiplies the gradient
 by $-1$ during backpropagation to enforce domain confusion and promote domain-invariant features.
 
+\subsubsection{Summary}
+In summary, MMD, CORAL, and DANN address domain shift from complementary perspectives: distribution matching in RKHS,
+second-order statistical alignment, and adversarial domain confusion. Together, they provide representative strategies
+for learning domain-invariant features, forming a solid foundation for the comparative analysis conducted in this work.
+
 \subsection{Suitable Dataset}
+VisDA-2017 \cite{visda2017} is the largest synth-to-real dataset, introduced in Visual Domain Adaptation Challenge. It
+contains 12 classes, with 152K training images and 55K validation images. The dataset provides a challenging
+large-scale setting for unsupervised domain adaptation, maiking it highly suitable for research.
+
 \subsection{Key Challenges}
+The primary challenge in synthetic-to-real domain adaptation is the significant domain gap: models trained on clean
+data struggle with the variability of real-world images, including differences in lighting, texture, and background.
+Another issue is over-adaptation, where strong alignment of feature distributions to enforce domain invariance may
+suppress task-relevant information and reduce overall performance.
 
 \section{Model Implementation}
+\subsection{Framework \& Computing power}
+As the main machine learning framework, PyTorch was chosen due to its flexibility, performance and the built-in
+implementation of ResNet and ViT-B architectures within Torch Vision submodule.
 
-% TODO: Fill this section
+Part of the computations were performed in Google Colab, while the remaining experiments were conducted on an RTX 4090.
+
+\subsection{ResNet50 Pre-training}
+In the first stage, a ResNet50 model was pre-trained for image classification on the source (synthetic) domain. The
+network was initialized with random weights and optimized using the Adam optimizer to minimize cross-entropy loss.
+Standard data augmentation techniques (random cropping and horizontal flipping) were applied during training.
+
+The pre-training process lasted 16 epochs. During the first five epochs, 20\% of the source training data was used as a
+validation subset. Starting from epoch 6, the validation approach was modified: the validation set was replaced with
+data sampled from the target (real-world) domain. This change was introduced to obtain an early estimate of
+cross-domain generalization.
+
+Figure~\ref{fig:resnet50_pretraining} presents the training and validation loss (left) and Top-1/Top-5 accuracy
+(right).
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=\linewidth]{resnet50_pretraining.png}
+	\caption{\textit{Training and validation loss (left) and accuracy (right) during ResNet50 pre-training.}}
+	\label{fig:resnet50_pretraining}
+\end{figure}
+
+During the first five epochs, training and validation metrics show similar trends, indicating consistent performance
+within the source domain. Training loss decreases steadily from approximately 1.5 to below 0.6, while Top-1 accuracy
+improves from 48\% to around 80\%. Validation performance on the source-domain split follows a comparable trajectory.
+
+After switching the validation set to the target domain (epoch 6 onward), a significant performance drop is observed.
+Validation loss increases sharply (exceeding 6.0), and Top-1 accuracy decreases to approximately 20–25\%, while
+training performance continues to improve. By the final epoch, training Top-1 accuracy approaches 90\%, whereas
+target-domain validation accuracy remains near 23\%.
+
+This behavior clearly demonstrates a crucial domain gap between synthetic and real data. While the model effectively
+fits the source distribution, it generalizes poorly to the target domain. These results justify the need for explicit
+domain adaptation strategies in subsequent stages of the project.
+
+\subsection{ViT-B/16 Pre-training}
+\textit{At the moment, this part is in progress.}
 
 \newpage
 \printbibliography[heading=bibintoc]
