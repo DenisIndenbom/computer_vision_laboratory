@@ -2,7 +2,7 @@ from torch import no_grad
 from torch import Tensor
 
 
-def accuracy(output: Tensor, target: Tensor, topk=(1, 5)) -> list:
+def accuracy(output: Tensor, target: Tensor, topk=(1, 5)) -> dict[str, float]:
     """
     Computes the top-k accuracy for the specified values of k.
 
@@ -13,7 +13,7 @@ def accuracy(output: Tensor, target: Tensor, topk=(1, 5)) -> list:
                 Default: (1, 5) computes top-1 and top-5 accuracy.
 
     Returns:
-        list: List of top-k accuracy scores as percentages (0-100).
+        dict: Dict of top-k accuracy scores as percentages (0-100).
               Length matches length of topk parameter.
     """
 
@@ -25,9 +25,9 @@ def accuracy(output: Tensor, target: Tensor, topk=(1, 5)) -> list:
         pred = pred.t()
         correct = pred.eq(target.view(1, -1).expand_as(pred))
 
-        res = []
+        res = {}
         for k in topk:
             correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
-            res.append(correct_k.mul_(100.0 / batch_size))
+            res[f'acc{k}'] = correct_k.mul_(100.0 / batch_size)
 
     return res

@@ -1,6 +1,7 @@
 import json
 
 from os import path
+from typing import Callable
 
 import torch
 import torch.nn as nn
@@ -9,20 +10,20 @@ from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from .metrics import accuracy
 
-
-def train(model: nn.Module,
-          train_loader: DataLoader,
-          val_loader: DataLoader,
-          optimizer: Optimizer,
-          criterion: nn.Module,
-          epochs: int,
-          start_epoch: int = 0,
-          checkpoint_interval: int = 5,
-          checkpoint_path: str = '.',
-          device: torch.device = torch.device('cpu'),
-          verbose: bool = True) -> dict[str, list[float]]:
+def train(
+        model: nn.Module,
+        train_loader: DataLoader,
+        val_loader: DataLoader,
+        optimizer: Optimizer,
+        criterion: nn.Module,
+        metrics: Callable[[torch.Tensor, torch.Tensor], dict[str, float]],
+        epochs: int,
+        start_epoch: int = 0,
+        checkpoint_interval: int = 5,
+        checkpoint_path: str = '.',
+        device: torch.device = torch.device('cpu'),
+        verbose: bool = True) -> dict[str, list[float]]:
     """
     Train the classification model for a given number of epochs, evaluating on the validation set after each epoch.
 
@@ -32,6 +33,7 @@ def train(model: nn.Module,
         val_loader: DataLoader supplying validation batches.
         optimizer: Optimizer for updating model weights.
         criterion: Loss function.
+        metrics: Function that takes predictions and targets and returns a dict of metric names to values.
         epochs: Number of training epochs.
         start_epoch: Epoch number to resume training from.
         checkpoint_interval: Interval of epochs for saving the model
@@ -40,19 +42,18 @@ def train(model: nn.Module,
         verbose: If True, print per-epoch metrics.
 
     Returns:
-        Dictionary containing lists of metrics for each epoch:
-        - 'train_loss', 'train_acc1', 'train_acc5'
-        - 'val_loss', 'val_acc1', 'val_acc5'
+        Returns:
+            Dictionary containing lists of metrics for each epoch. 
+            Always includes 'train_loss' and 'val_loss'. 
+            Additional keys are prefixed with 'train_' and 'val_' 
+            corresponding to the metric names returned by the `metrics` function.
+
+            For example, if `metrics` returns {'acc': 0.95, 'f1': 0.92}, 
+            the history will contain 'train_acc', 'val_acc', 'train_f1', 'val_f1'.
+            Each list has length equal to the number of epochs trained.
     """
     # History storage
-    history = {
-        'train_loss': [],
-        'train_acc1': [],
-        'train_acc5': [],
-        'val_loss': [],
-        'val_acc1': [],
-        'val_acc5': []
-    }
+    history: dict[str, list[float]] = {}
 
     # Store model name
     model_name = type(model).__name__
@@ -72,10 +73,11 @@ def train(model: nn.Module,
         print('OK')
 
     for epoch in range(start_epoch + 1, epochs + 1):
+        # --- Training ---
         model.train()
+
         total_loss = 0.0
-        acc1 = 0.0
-        acc5 = 0.0
+        total_metrics: dict[str, float] = {}
 
         train_loop = tqdm(
             train_loader,
@@ -100,39 +102,91 @@ def train(model: nn.Module,
             optimizer.step()
 
             # Update metrics
+            batch_metrics = metrics(pred, y_batch)
+            for name, value in batch_metrics.items():
+                total_metrics[name] = total_metrics.get(name, 0.0) + value
             total_loss += loss.item()
-            acc = accuracy(pred, y_batch)
-            acc1 += acc[0].item() if torch.is_tensor(acc[0]) else float(acc[0])
-            acc5 += acc[1].item() if torch.is_tensor(acc[1]) else float(acc[1])
 
             # Update tqdm postfix
-            train_loop.set_postfix(loss=loss.item(),
-                                   acc1=acc[0].item() if torch.is_tensor(acc[0]) else acc[0])
+            train_loop.set_postfix(loss=loss.item())
 
+        # Compute average by train batch
         num_train_batches = len(train_loader)
+        avg_metrics = {
+            name: total / num_train_batches
+            for name, total in total_metrics.items()
+        }
         avg_train_loss = total_loss / num_train_batches
-        avg_train_acc1 = acc1 / num_train_batches
-        avg_train_acc5 = acc5 / num_train_batches
+
+        # Initialize history if empty
+        if not history:
+            history['train_loss'] = []
+            history['val_loss'] = []
+            history = {f'{split}_{key}': []
+                       for split in ['train', 'val']
+                       for key in avg_metrics.keys()}
 
         # Store training metrics
         history['train_loss'].append(avg_train_loss)
-        history['train_acc1'].append(avg_train_acc1)
-        history['train_acc5'].append(avg_train_acc5)
+        for name, value in avg_metrics.items():
+            history[f'train_{name}'].append(value)
 
-        avg_val = validate(model, val_loader, criterion, device, epoch, epochs)
+        # --- Validation ---
+        model.eval()
+        total_val_loss = 0.0
+        total_val_metrics: dict[str, float] = {}
 
-        # Store validation metrics
-        history['val_loss'].append(avg_val[0])
-        history['val_acc1'].append(avg_val[1])
-        history['val_acc5'].append(avg_val[2])
+        val_loop = tqdm(
+            val_loader,
+            desc=f'Epoch {epoch}/{epochs} [Val]',
+            leave=False
+        )
+        with torch.no_grad():
+            for x_batch, y_batch in val_loop:
+                x_batch = x_batch.to(device)
+                y_batch = y_batch.to(device)
+
+                # Forward pass
+                pred = model(x_batch)
+                loss = criterion(pred, y_batch)
+
+                # Update metrics
+                batch_metrics = metrics(pred, y_batch)
+                for name, value in batch_metrics.items():
+                    total_val_metrics[name] = total_val_metrics.get(
+                        name, 0.0) + value
+                total_val_loss += loss.item()
+
+                # Update tqdm postfix
+                val_loop.set_postfix(loss=loss.item())
+
+        # Compute average by validation batch
+        num_val_batches = len(val_loader)
+        avg_val_metrics = {
+            name: total / num_val_batches
+            for name, total in total_val_metrics.items()
+        }
+        avg_val_loss = total_val_loss / num_val_batches
+
+        history['val_loss'].append(avg_val_loss)
+        for name, value in avg_val_metrics.items():
+            history[f'val_{name}'].append(value)
 
         # Print epoch summary if verbose
         if verbose:
+            train_metric_str = ' | '.join(
+                [f'Train {name}: {value:.4f}' for name,
+                    value in avg_metrics.items()]
+            )
+            val_metric_str = ' | '.join(
+                [f'Val {name}: {value:.4f}' for name,
+                    value in avg_val_metrics.items()]
+            )
             print(f'Epoch {epoch:3d} | '
-                  f'Train Loss: {avg_train_loss:.4f} | Train Acc1: {avg_train_acc1:.2f}% | Train Acc5: {avg_train_acc5:.2f}% | '
-                  f'Val Loss: {avg_val[0]:.4f} | Val Acc1: {avg_val[1]:.2f}% | Val Acc5: {avg_val[2]:.2f}%')
+                  f'Train Loss: {avg_train_loss:.4f} | {train_metric_str} | '
+                  f'Val Loss: {avg_val_loss:.4f} | {val_metric_str}')
 
-        # Save chekcpoint if interval
+        # Save checkpoint if interval
         if epoch % checkpoint_interval == 0:
             print('Saving checkpoint...', end='')
             torch.save(model.state_dict(),
@@ -146,79 +200,24 @@ def train(model: nn.Module,
     return history
 
 
-def validate(model: nn.Module,
-             dataloader: DataLoader,
-             criterion: nn.Module,
-             device: torch.device = torch.device('cpu'),
-             epoch: int = 1,
-             epochs: int = 1) -> tuple[float, float, float]:
-    """
-    Evaluate the classification model on a validation set.
-
-    Args:
-        model: Neural network model.
-        dataloader: DataLoader supplying validation batches.
-        criterion: Loss function.
-        device: Device on which to perform computation.
-        epoch: Current epoch.
-        epochs: Total epochs.
-
-    Returns:
-        Tuple of (average loss, top‑1 accuracy, top‑5 accuracy) on the validation set.
-    """
-    model.eval()
-    total_loss = 0.0
-    acc1 = 0.0
-    acc5 = 0.0
-
-    val_loop = tqdm(
-        dataloader, desc=f'Epoch {epoch}/{epochs} [Val]', leave=False)
-    with torch.no_grad():
-        for x_batch, y_batch in val_loop:
-            x_batch = x_batch.to(device)
-            y_batch = y_batch.to(device)
-
-            # Forward pass
-            pred = model(x_batch)
-            loss = criterion(pred, y_batch)
-
-            # Update metrics
-            total_loss += loss.item()
-            acc = accuracy(pred, y_batch)
-            acc1 += float(acc[0]) if not torch.is_tensor(acc[0]
-                                                         ) else acc[0].item()
-            acc5 += float(acc[1]) if not torch.is_tensor(acc[1]
-                                                         ) else acc[1].item()
-
-            val_loop.set_postfix(loss=loss.item(),
-                                 acc1=acc[0].item() if torch.is_tensor(acc[0]) else acc[0])
-
-    # Average over number of batches
-    num_batches = len(dataloader)
-    avg_loss = total_loss / num_batches
-    avg_acc1 = acc1 / num_batches
-    avg_acc5 = acc5 / num_batches
-
-    return avg_loss, avg_acc1, avg_acc5
-
-
 def test(model: nn.Module,
          dataloader: DataLoader,
-         device: torch.device = torch.device('cpu')) -> tuple[float, float]:
+         metrics: Callable[[torch.Tensor, torch.Tensor], dict[str, float]],
+         device: torch.device = torch.device('cpu')) -> dict[str, float]:
     """
     Evaluate the classification model on a test set.
 
     Args:
         model: Neural network model.
         dataloader: DataLoader supplying test batches.
+        metrics: Function that takes predictions and targets and returns a dict of metric names to values.
         device: Device on which to perform computation.
 
     Returns:
-        Tuple of (top‑1 accuracy, top‑5 accuracy) on the test set.
+        Dictionary containing average metrics on the test set (e.g., 'acc1', 'acc5').
     """
     model.eval()
-    acc1 = 0.0
-    acc5 = 0.0
+    total_metrics: dict[str, float] = {}
 
     test_loop = tqdm(dataloader, desc='[Test]', leave=False)
     with torch.no_grad():
@@ -230,18 +229,13 @@ def test(model: nn.Module,
             pred = model(x_batch)
 
             # Update metrics
-            acc = accuracy(pred, y_batch)
-            acc1 += float(acc[0]) if not torch.is_tensor(acc[0]
-                                                         ) else acc[0].item()
-            acc5 += float(acc[1]) if not torch.is_tensor(acc[1]
-                                                         ) else acc[1].item()
+            batch_metrics = metrics(pred, y_batch)
+            for name, value in batch_metrics.items():
+                total_metrics[name] = total_metrics.get(name, 0.0) + value
 
-            test_loop.set_postfix(
-                acc1=acc[0].item() if torch.is_tensor(acc[0]) else acc[0])
+            test_loop.set_postfix(batch_metrics)
 
-    # Average over number of batches
-    num_batches = len(dataloader)
-    avg_acc1 = acc1 / num_batches
-    avg_acc5 = acc5 / num_batches
-
-    return avg_acc1, avg_acc5
+    return {
+        name: total / len(dataloader)
+        for name, total in total_metrics.items()
+    }
