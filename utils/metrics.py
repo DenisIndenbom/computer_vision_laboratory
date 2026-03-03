@@ -28,6 +28,6 @@ def accuracy(output: Tensor, target: Tensor, topk=(1, 5)) -> dict[str, float]:
         res = {}
         for k in topk:
             correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
-            res[f'acc{k}'] = correct_k.mul_(100.0 / batch_size)
+            res[f'acc{k}'] = correct_k.mul_(100.0 / batch_size).item()
 
     return res

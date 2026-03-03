@@ -10,6 +10,8 @@ from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from .history import History
+
 
 def train(
         model: nn.Module,
@@ -23,7 +25,7 @@ def train(
         checkpoint_interval: int = 5,
         checkpoint_path: str = '.',
         device: torch.device = torch.device('cpu'),
-        verbose: bool = True) -> dict[str, list[float]]:
+        verbose: bool = True) -> dict[str, list[int | float | None]]:
     """
     Train the classification model for a given number of epochs, evaluating on the validation set after each epoch.
 
@@ -43,17 +45,17 @@ def train(
 
     Returns:
         Returns:
-            Dictionary containing lists of metrics for each epoch. 
-            Always includes 'train_loss' and 'val_loss'. 
-            Additional keys are prefixed with 'train_' and 'val_' 
+            Dictionary containing lists of metrics for each epoch.
+            Always includes 'train_loss' and 'val_loss'.
+            Additional keys are prefixed with 'train_' and 'val_'
             corresponding to the metric names returned by the `metrics` function.
 
-            For example, if `metrics` returns {'acc': 0.95, 'f1': 0.92}, 
+            For example, if `metrics` returns {'acc': 0.95, 'f1': 0.92},
             the history will contain 'train_acc', 'val_acc', 'train_f1', 'val_f1'.
             Each list has length equal to the number of epochs trained.
     """
     # History storage
-    history: dict[str, list[float]] = {}
+    history = History(start_epoch if start_epoch > 0 else 1)
 
     # Store model name
     model_name = type(model).__name__
@@ -68,16 +70,16 @@ def train(
             torch.load(path.join(checkpoint_path, f'{model_name}_checkpoint_{start_epoch}.model')))
         optimizer.load_state_dict(
             torch.load(path.join(checkpoint_path, f'{model_name}_checkpoint_{start_epoch}.optim')))
-        with open(path.join(checkpoint_path, f'{model_name}_checkpoint_{start_epoch}.metrics'), 'r') as file:
-            history = json.load(file)
+        history.load(path.join(checkpoint_path,
+                     f'{model_name}_checkpoint_{start_epoch}.metrics'))
         print('OK')
 
     for epoch in range(start_epoch + 1, epochs + 1):
         # --- Training ---
         model.train()
 
-        total_loss = 0.0
-        total_metrics: dict[str, float] = {}
+        total_train_loss = 0.0
+        total_train_metrics: dict[str, float] = {}
 
         train_loop = tqdm(
             train_loader,
@@ -104,32 +106,24 @@ def train(
             # Update metrics
             batch_metrics = metrics(pred, y_batch)
             for name, value in batch_metrics.items():
-                total_metrics[name] = total_metrics.get(name, 0.0) + value
-            total_loss += loss.item()
+                total_train_metrics[name] = \
+                    total_train_metrics.get(name, 0.0) + value
+            total_train_loss += loss.item()
 
             # Update tqdm postfix
             train_loop.set_postfix(loss=loss.item())
 
         # Compute average by train batch
         num_train_batches = len(train_loader)
-        avg_metrics = {
+        avg_train_metrics = {
             name: total / num_train_batches
-            for name, total in total_metrics.items()
+            for name, total in total_train_metrics.items()
         }
-        avg_train_loss = total_loss / num_train_batches
-
-        # Initialize history if empty
-        if not history:
-            history['train_loss'] = []
-            history['val_loss'] = []
-            history = {f'{split}_{key}': []
-                       for split in ['train', 'val']
-                       for key in avg_metrics.keys()}
+        avg_train_loss = total_train_loss / num_train_batches
 
         # Store training metrics
-        history['train_loss'].append(avg_train_loss)
-        for name, value in avg_metrics.items():
-            history[f'train_{name}'].append(value)
+        history.add('train_loss', avg_train_loss)
+        history.add_many(avg_train_metrics, 'train_')
 
         # --- Validation ---
         model.eval()
@@ -153,8 +147,8 @@ def train(
                 # Update metrics
                 batch_metrics = metrics(pred, y_batch)
                 for name, value in batch_metrics.items():
-                    total_val_metrics[name] = total_val_metrics.get(
-                        name, 0.0) + value
+                    total_val_metrics[name] = \
+                        total_val_metrics.get(name, 0.0) + value
                 total_val_loss += loss.item()
 
                 # Update tqdm postfix
@@ -168,19 +162,18 @@ def train(
         }
         avg_val_loss = total_val_loss / num_val_batches
 
-        history['val_loss'].append(avg_val_loss)
-        for name, value in avg_val_metrics.items():
-            history[f'val_{name}'].append(value)
+        history.add('val_loss', avg_val_loss)
+        history.add_many(avg_val_metrics, 'val_')
 
         # Print epoch summary if verbose
         if verbose:
             train_metric_str = ' | '.join(
-                [f'Train {name}: {value:.4f}' for name,
-                    value in avg_metrics.items()]
+                [f'Train {name}: {value:.4f}'
+                 for name, value in avg_train_metrics.items()]
             )
             val_metric_str = ' | '.join(
-                [f'Val {name}: {value:.4f}' for name,
-                    value in avg_val_metrics.items()]
+                [f'Val {name}: {value:.4f}'
+                 for name, value in avg_val_metrics.items()]
             )
             print(f'Epoch {epoch:3d} | '
                   f'Train Loss: {avg_train_loss:.4f} | {train_metric_str} | '
@@ -193,11 +186,13 @@ def train(
                        path.join(checkpoint_path, f'{model_name}_checkpoint_{epoch}.model'))
             torch.save(optimizer.state_dict(),
                        path.join(checkpoint_path, f'{model_name}_checkpoint_{epoch}.optim'))
-            with open(path.join(checkpoint_path, f'{model_name}_checkpoint_{epoch}.metrics'), 'w') as file:
-                json.dump(history, file)
+            history.dump(path.join(checkpoint_path,
+                         f'{model_name}_checkpoint_{epoch}.metrics'))
             print('OK')
 
-    return history
+        history.next_epoch()
+
+    return history.to_dict()
 
 
 def test(model: nn.Module,
