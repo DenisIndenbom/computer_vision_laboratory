@@ -7,6 +7,8 @@ from urllib import request
 from typing import Callable
 from PIL import Image
 
+from .typing import DatasetLike
+
 
 class BaseImageFolderDataset(Dataset):
     URL: str = ''
@@ -60,7 +62,7 @@ class BaseImageFolderDataset(Dataset):
             if bytes_value < 1024 or unit == 'TB':
                 return f'{bytes_value:.2f} {unit}'
             bytes_value /= 1024
-            
+
         return ''
 
     @classmethod
@@ -127,3 +129,24 @@ class BaseImageFolderDataset(Dataset):
             image = self.transform(image)
 
         return image, label
+
+
+class DomainDataset(Dataset):
+    def __init__(self, source_dataset: DatasetLike, target_dataset: DatasetLike, target_label=-1):
+        self.source = source_dataset
+        self.target = target_dataset
+        self.target_label = target_label
+
+    def __len__(self):
+        return len(self.source) + len(self.target)
+
+    def __getitem__(self, idx):
+        if idx < len(self.source):
+            return self.source[idx]
+
+        x = self.target[idx - len(self.source)]
+
+        if isinstance(x, tuple):
+            x = x[0]
+
+        return x, self.target_label

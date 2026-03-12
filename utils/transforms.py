@@ -1,6 +1,6 @@
 from torchvision import transforms
 
-resnet_base_transforms = transforms.Compose([
+base_transforms = transforms.Compose([
     transforms.Resize(256),
     transforms.CenterCrop(224),
     transforms.ToTensor(),
@@ -8,7 +8,7 @@ resnet_base_transforms = transforms.Compose([
                          std=[0.229, 0.224, 0.225]),
 ])
 
-resnet_train_transforms = transforms.Compose([
+train_transforms = transforms.Compose([
     transforms.RandomResizedCrop(224, scale=(0.08, 1.0), ratio=(0.75, 1.33)),
     transforms.RandomHorizontalFlip(p=0.5),
     transforms.RandomRotation(degrees=15),

@@ -1,0 +1,6 @@
+from typing import Protocol, Any
+
+
+class DatasetLike(Protocol):
+    def __len__(self) -> int: ...
+    def __getitem__(self, idx: int) -> Any: ...
