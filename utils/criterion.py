@@ -13,42 +13,54 @@ class MMD(nn.Module):
         n_total = source.size(0) + target.size(0)
         combined = torch.cat([source, target], dim=0)
 
-        combined_rows = combined.unsqueeze(0).expand(
-            n_total, n_total, combined.size(1)
-        )
-        combined_cols = combined.unsqueeze(1).expand(
-            n_total, n_total, combined.size(1)
-        )
-        squared_distances = ((combined_rows - combined_cols) ** 2).sum(dim=2)
+        squared_distances = torch.cdist(combined, combined, p=2) ** 2
 
         if self.fix_sigma:
             bandwidth = self.fix_sigma
         else:
-            bandwidth = torch.sum(squared_distances.data) / \
-                (n_total ** 2 - n_total)
+            off_diag_sum = squared_distances.sum() - squared_distances.diag().sum()
+            bandwidth = off_diag_sum / (n_total * (n_total - 1))
+            bandwidth = bandwidth.detach()
+            bandwidth /= self.kernel_mul ** (self.kernel_num // 2)
 
-        bandwidth /= self.kernel_mul ** (self.kernel_num // 2)
+        bandwidths = [bandwidth * (self.kernel_mul ** i)
+                      for i in range(self.kernel_num)]
 
-        bandwidth_scales = [
-            bandwidth * (self.kernel_mul ** i)
-            for i in range(self.kernel_num)
-        ]
+        kernel = torch.zeros_like(squared_distances)
+        for bw in bandwidths:
+            kernel += torch.exp(-squared_distances / bw)
 
-        kernel_matrices = [
-            torch.exp(-squared_distances / bandwidth_scale)
-            for bandwidth_scale in bandwidth_scales
-        ]
+        return kernel
 
-        return sum(kernel_matrices, start=torch.ones_like(kernel_matrices[0]))
+    def forward(self, source: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        kernel = self._gaussian_kernel(source, target)
 
-    def forward(self, source: torch.Tensor, target: torch.Tensor):
-        batch_size = source.size()[0]
+        n = source.size(0)
+        XX = kernel[:n, :n]
+        YY = kernel[n:, n:]
+        XY = kernel[:n, n:]
 
-        kernels = self._gaussian_kernel(source, target)
+        return XX.mean() + YY.mean() - 2 * XY.mean()
 
-        XX = kernels[:batch_size, :batch_size]
-        YY = kernels[batch_size:, batch_size:]
-        XY = kernels[:batch_size, batch_size:]
-        YX = kernels[batch_size:, :batch_size]
 
-        return torch.mean(XX + YY - XY - YX)
+class Coral(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, source: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        d = source.size(1)
+
+        # Calculate the covariance matrices
+        source_c = self._covariance(source)
+        target_c = self._covariance(target)
+
+        # Calculate the difference between matrices
+        diff = (source_c - target_c)
+
+        return torch.mean(torch.mul(diff, diff)) / (4 * d * d)
+
+    def _covariance(self, x: torch.Tensor) -> torch.Tensor:
+        # Center the data around the origin
+        x = x - x.mean(dim=0, keepdim=True)
+        # Covariance matrix - X^T * X / (N-1)
+        return x.T @ x / (x.size(0) - 1)
