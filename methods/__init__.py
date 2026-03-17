@@ -7,6 +7,9 @@ from typing import Callable, Any, TypedDict
 class TrainArgs(TypedDict):
     epochs: int
     start_epoch: int
+    batch_size: int
+    learning_rate: float
+    workers: int
     checkpoint_interval: int
     checkpoint_path: str
     verbose: bool
