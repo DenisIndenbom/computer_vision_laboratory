@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  cvlab:
+    container_name: "deindenbom-cvlab-train"
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    working_dir: /cvlab
+
+    volumes:
+      - "${PWD}/data:/cvlab/data"
+      - "${PWD}/checkpoints:/cvlab/checkpoints"
+      - "${PWD}/methods:/cvlab/methods"
+
+    environment:
+      - METHOD=test
+      - EPOCHS=50
+      - START_EPOCH=10
+      - CHECKPOINT_INTERVAL=5
+
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+    command: >
+      python train.py
+      --method ${METHOD}
+      --epochs ${EPOCHS}
+      --start_epoch ${START_EPOCH}
+      --checkpoint_interval ${CHECKPOINT_INTERVAL}
+
+networks:
+  default:
+    name: "deindenbom-cvlab-train"
