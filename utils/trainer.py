@@ -44,15 +44,14 @@ def train(
         verbose: If True, print per-epoch metrics.
 
     Returns:
-        Returns:
-            Dictionary containing lists of metrics for each epoch.
-            Always includes 'train_loss' and 'val_loss'.
-            Additional keys are prefixed with 'train_' and 'val_'
-            corresponding to the metric names returned by the `metrics` function.
+        Dictionary containing lists of metrics for each epoch.
+        Always includes 'train_loss' and 'val_loss'.
+        Additional keys are prefixed with 'train_' and 'val_'
+        corresponding to the metric names returned by the `metrics` function.
 
-            For example, if `metrics` returns {'acc': 0.95, 'f1': 0.92},
-            the history will contain 'train_acc', 'val_acc', 'train_f1', 'val_f1'.
-            Each list has length equal to the number of epochs trained.
+        For example, if `metrics` returns {'acc': 0.95, 'f1': 0.92},
+        the history will contain 'train_acc', 'val_acc', 'train_f1', 'val_f1'.
+        Each list has length equal to the number of epochs trained.
     """
     # History storage
     history = History(start_epoch if start_epoch > 0 else 1)
