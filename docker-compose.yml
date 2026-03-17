@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   cvlab:
     container_name: "deindenbom-cvlab-train"
@@ -9,26 +7,38 @@ services:
 
     working_dir: /cvlab
 
+    tty: true
+
+    env_file:
+      - .env
+
     volumes:
       - "${PWD}/data:/cvlab/data"
       - "${PWD}/checkpoints:/cvlab/checkpoints"
       - "${PWD}/methods:/cvlab/methods"
 
     environment:
-      - METHOD=test
-      - EPOCHS=50
-      - START_EPOCH=10
-      - CHECKPOINT_INTERVAL=5
-
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
     command: >
       python train.py
       --method ${METHOD}
       --epochs ${EPOCHS}
       --start_epoch ${START_EPOCH}
+      --batch_size ${BATCH_SIZE}
+      --learning_rate ${LEARNING_RATE}
+      --workers ${WORKERS}
       --checkpoint_interval ${CHECKPOINT_INTERVAL}
+      --verbose ${VERBOSE}
 
 networks:
   default:

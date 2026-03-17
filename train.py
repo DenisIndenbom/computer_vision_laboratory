@@ -17,6 +17,8 @@ def main():
                        help='Initial learning rate for optimizer')
     group.add_argument('--workers', type=int, default=4,
                        help='Number of dataloader worker processes')
+    group.add_argument('--seed', type=int, default=42,
+                       help='Random seed for numpy/torch random number generators')
     group.add_argument('--checkpoint_path', type=str, default='./checkpoints',
                        help='Directory path where model checkpoints will be saved')
     group.add_argument('--checkpoint_interval', type=int, default=5,
@@ -34,6 +36,7 @@ def main():
         'batch_size': args.batch_size,
         'learning_rate': args.learning_rate,
         'workers': args.workers,
+        'seed': args.seed,
         'checkpoint_interval': args.checkpoint_interval,
         'checkpoint_path': args.checkpoint_path,
         'verbose': args.verbose

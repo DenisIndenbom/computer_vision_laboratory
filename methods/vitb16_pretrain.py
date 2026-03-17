@@ -9,13 +9,9 @@ from torchvision.models import vit_b_16
 from utils.dataset import BaseImageFolderDataset
 from utils.transforms import base_transforms, train_transforms
 from utils.metrics import accuracy
-from utils.trainer import train
+from utils.trainer import train, set_torch_seed
 
 from methods import TrainArgs, register
-
-SEED = 42
-GPU = torch.device(
-    'cuda:0') if torch.cuda.is_available() else torch.device('cpu')
 
 
 class VisDA2017Train(BaseImageFolderDataset):
@@ -32,12 +28,7 @@ class VisDA2017Validation(BaseImageFolderDataset):
 
 @register('vitb16_pretrain')
 def vitb16_pretrain(args: TrainArgs):
-    # PyTorch CPU
-    torch.manual_seed(SEED)
-
-    # PyTorch CUDA
-    torch.cuda.manual_seed(SEED)
-    torch.cuda.manual_seed_all(SEED)
+    set_torch_seed(args['seed'])
 
     # Load datasets
     train_dataset = VisDA2017Train(
@@ -79,5 +70,5 @@ def vitb16_pretrain(args: TrainArgs):
         start_epoch=args['start_epoch'],
         checkpoint_interval=args['checkpoint_interval'],
         checkpoint_path=args['checkpoint_path'],
-        device=GPU
+        device=torch.device('cuda:0')
     )

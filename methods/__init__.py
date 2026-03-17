@@ -10,6 +10,7 @@ class TrainArgs(TypedDict):
     batch_size: int
     learning_rate: float
     workers: int
+    seed: int
     checkpoint_interval: int
     checkpoint_path: str
     verbose: bool

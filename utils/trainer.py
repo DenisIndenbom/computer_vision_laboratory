@@ -1,6 +1,4 @@
-import json
-
-from os import path
+from os import path, environ
 from typing import Callable
 
 import torch
@@ -11,6 +9,42 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from .history import History
+
+
+class tqdmd(tqdm):
+    """ 
+    tqdm with docker support.
+    """
+    in_docker = environ.get('RUNNING_IN_DOCKER', False)
+
+    def update(self, n=1):
+        result = super().update(n)
+
+        if result and self.in_docker:
+            print(f'{self}\n')
+
+        return result
+
+    def display(self, msg=None, pos=None):
+        if self.in_docker:
+            return
+
+        return super().display(msg, pos)
+
+
+def set_torch_seed(seed: int):
+    """
+    Set seed in the pytorch framework.
+
+    Args:
+        seed: Seed to set.
+    """
+    # PyTorch CPU
+    torch.manual_seed(seed)
+
+    # PyTorch CUDA
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
 
 
 def train(
@@ -80,10 +114,10 @@ def train(
         total_train_loss = 0.0
         total_train_metrics: dict[str, float] = {}
 
-        train_loop = tqdm(
+        train_loop = tqdmd(
             train_loader,
             desc=f'Epoch {epoch}/{epochs} [Train]',
-            leave=False
+            leave=False,
         )
         for x_batch, y_batch in train_loop:
             # Zero gradient
@@ -129,7 +163,7 @@ def train(
         total_val_loss = 0.0
         total_val_metrics: dict[str, float] = {}
 
-        val_loop = tqdm(
+        val_loop = tqdmd(
             val_loader,
             desc=f'Epoch {epoch}/{epochs} [Val]',
             leave=False
@@ -213,7 +247,7 @@ def test(model: nn.Module,
     model.eval()
     total_metrics: dict[str, float] = {}
 
-    test_loop = tqdm(dataloader, desc='[Test]', leave=False)
+    test_loop = tqdmd(dataloader, desc='[Test]', leave=False)
     with torch.no_grad():
         for x_batch, y_batch in test_loop:
             x_batch = x_batch.to(device)
