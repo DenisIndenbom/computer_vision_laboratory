@@ -3,10 +3,7 @@ services:
     container_name: "deindenbom-cvlab-train"
     build:
       context: .
-      dockerfile: Dockerfile
-
-    working_dir: /cvlab
-
+      dockerfile: cvlab.dockerfile
     tty: true
 
     env_file:
@@ -39,6 +36,18 @@ services:
       --workers ${WORKERS}
       --checkpoint_interval ${CHECKPOINT_INTERVAL}
       --verbose ${VERBOSE}
+
+  tensorboard:
+    container_name: "deindenbom-cvlab-tensorboard"
+    build:
+      context: .
+      dockerfile: tensorboard.dockerfile
+
+    ports:
+      - "6006:6006"
+
+    volumes:
+      - ./logs:/logs
 
 networks:
   default:

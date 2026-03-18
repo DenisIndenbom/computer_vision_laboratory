@@ -111,9 +111,6 @@ def train(
         # --- Training ---
         model.train()
 
-        total_train_loss = 0.0
-        total_train_metrics: dict[str, float] = {}
-
         train_loop = tqdmd(
             train_loader,
             desc=f'Epoch {epoch}/{epochs} [Train]',
@@ -138,30 +135,18 @@ def train(
 
             # Update metrics
             batch_metrics = metrics(pred, y_batch)
-            for name, value in batch_metrics.items():
-                total_train_metrics[name] = \
-                    total_train_metrics.get(name, 0.0) + value
-            total_train_loss += loss.item()
+            history.add_batch(batch_metrics)
+            history.add_batch({'loss': loss.item()})
 
             # Update tqdm postfix
             train_loop.set_postfix(loss=loss.item())
 
-        # Compute average by train batch
-        num_train_batches = len(train_loader)
-        avg_train_metrics = {
-            name: total / num_train_batches
-            for name, total in total_train_metrics.items()
-        }
-        avg_train_loss = total_train_loss / num_train_batches
-
-        # Store training metrics
-        history.add('train_loss', avg_train_loss)
-        history.add_many(avg_train_metrics, 'train_')
+        # Average train batches and log to history
+        avg_train_metrics = history.commit(prefix='train_')
+        avg_train_loss = avg_train_metrics.pop('loss')
 
         # --- Validation ---
         model.eval()
-        total_val_loss = 0.0
-        total_val_metrics: dict[str, float] = {}
 
         val_loop = tqdmd(
             val_loader,
@@ -179,24 +164,15 @@ def train(
 
                 # Update metrics
                 batch_metrics = metrics(pred, y_batch)
-                for name, value in batch_metrics.items():
-                    total_val_metrics[name] = \
-                        total_val_metrics.get(name, 0.0) + value
-                total_val_loss += loss.item()
+                history.add_batch(batch_metrics)
+                history.add_batch({'loss': loss.item()})
 
                 # Update tqdm postfix
                 val_loop.set_postfix(loss=loss.item())
 
-        # Compute average by validation batch
-        num_val_batches = len(val_loader)
-        avg_val_metrics = {
-            name: total / num_val_batches
-            for name, total in total_val_metrics.items()
-        }
-        avg_val_loss = total_val_loss / num_val_batches
-
-        history.add('val_loss', avg_val_loss)
-        history.add_many(avg_val_metrics, 'val_')
+        # Average validation batches and log to history
+        avg_val_metrics = history.commit(prefix='val_')
+        avg_val_loss = avg_val_metrics.pop('loss')
 
         # Print epoch summary if verbose
         if verbose:
