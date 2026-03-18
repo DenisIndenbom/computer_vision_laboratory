@@ -4,6 +4,8 @@ services:
     build:
       context: .
       dockerfile: cvlab.dockerfile
+
+    shm_size: "8gb"
     tty: true
 
     env_file:
