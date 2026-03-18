@@ -91,7 +91,7 @@ def train(
         Each list has length equal to the number of epochs trained.
     """
     # History storage
-    history = History(start_epoch if start_epoch > 0 else 1)
+    history = History(start_epoch + 1)
 
     # Store model name
     model_name = type(model).__name__
