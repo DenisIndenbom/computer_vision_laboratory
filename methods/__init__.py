@@ -5,6 +5,7 @@ from typing import Callable, Any, TypedDict
 
 
 class TrainArgs(TypedDict):
+    run_name: str
     epochs: int
     start_epoch: int
     batch_size: int

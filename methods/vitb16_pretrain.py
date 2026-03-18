@@ -1,8 +1,10 @@
+import os
 import torch
 
 from torch import nn
 from torch import optim
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 
 from torchvision.models import vit_b_16
 
@@ -59,6 +61,8 @@ def vitb16_pretrain(args: TrainArgs):
     optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'])
     loss = nn.CrossEntropyLoss()
 
+    summary_writer = SummaryWriter(os.path.join('./logs', args['run_name']))
+
     train(
         model,
         train_dataloader,
@@ -70,5 +74,6 @@ def vitb16_pretrain(args: TrainArgs):
         start_epoch=args['start_epoch'],
         checkpoint_interval=args['checkpoint_interval'],
         checkpoint_path=args['checkpoint_path'],
-        device=torch.device('cuda:0')
+        device=torch.device('cuda:0'),
+        summary_writer=summary_writer
     )

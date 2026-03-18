@@ -6,6 +6,8 @@ import torch.nn as nn
 
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
+
 from tqdm import tqdm
 
 from .history import History
@@ -59,6 +61,7 @@ def train(
         checkpoint_interval: int = 5,
         checkpoint_path: str = '.',
         device: torch.device = torch.device('cpu'),
+        summary_writer: SummaryWriter | None = None,
         verbose: bool = True) -> dict[str, list[int | float | None]]:
     """
     Train the classification model for a given number of epochs, evaluating on the validation set after each epoch.
@@ -145,6 +148,10 @@ def train(
         avg_train_metrics = history.commit(prefix='train_')
         avg_train_loss = avg_train_metrics.pop('loss')
 
+        if summary_writer:
+            summary_writer.add_scalar('train/loss', avg_train_loss, epoch)
+            summary_writer.add_scalars('train', avg_train_metrics, epoch)
+
         # --- Validation ---
         model.eval()
 
@@ -174,6 +181,10 @@ def train(
         avg_val_metrics = history.commit(prefix='val_')
         avg_val_loss = avg_val_metrics.pop('loss')
 
+        if summary_writer:
+            summary_writer.add_scalar('validation/loss', avg_val_loss, epoch)
+            summary_writer.add_scalars('validation', avg_val_metrics, epoch)
+
         # Print epoch summary if verbose
         if verbose:
             train_metric_str = ' | '.join(
@@ -198,6 +209,9 @@ def train(
             history.dump(path.join(checkpoint_path,
                          f'{model_name}_checkpoint_{epoch}.metrics'))
             print('OK')
+
+        if summary_writer:
+            summary_writer.flush()
 
         history.next_epoch()
 

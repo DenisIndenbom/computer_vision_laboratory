@@ -25,7 +25,7 @@ class History:
 
     def add_many(self, metrics: dict[str, int | float], prefix: str = ''):
         for name, value in metrics.items():
-            self.add(prefix+name, value)
+            self.add(prefix + name, value)
 
     def commit(self, prefix: str = '') -> dict[str, int | float]:
         avg = {}

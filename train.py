@@ -7,6 +7,8 @@ def main():
     group = parser.add_argument_group('Training options')
     group.add_argument('--method', type=str,
                        help='Method name (module in methods/)')
+    group.add_argument('--name', type=str,
+                       help='Run name in logs/')
     group.add_argument('--epochs', type=int, default=50,
                        help='Number of training epochs')
     group.add_argument('--start_epoch', type=int, default=0,
@@ -31,6 +33,7 @@ def main():
     from methods import METHOD_REGISTRY, TrainArgs
 
     train_args: TrainArgs = {
+        'run_name': args.name,
         'epochs': args.epochs,
         'start_epoch': args.start_epoch,
         'batch_size': args.batch_size,

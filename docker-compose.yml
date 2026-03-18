@@ -12,7 +12,7 @@ services:
     volumes:
       - "${PWD}/data:/cvlab/data"
       - "${PWD}/checkpoints:/cvlab/checkpoints"
-      - "${PWD}/methods:/cvlab/methods"
+      - "${PWD}/logs:/cvlab/logs"
 
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
@@ -29,6 +29,7 @@ services:
     command: >
       python train.py
       --method ${METHOD}
+      --name ${RUN_NAME}
       --epochs ${EPOCHS}
       --start_epoch ${START_EPOCH}
       --batch_size ${BATCH_SIZE}
@@ -47,7 +48,7 @@ services:
       - "6006:6006"
 
     volumes:
-      - ./logs:/logs
+      - "${PWD}/logs:/tensorboard/logs"
 
 networks:
   default:
