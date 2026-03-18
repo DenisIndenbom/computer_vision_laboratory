@@ -200,7 +200,7 @@ def train(
                   f'Val Loss: {avg_val_loss:.4f} | {val_metric_str}')
 
         # Save checkpoint if interval
-        if epoch % checkpoint_interval == 0:
+        if epoch % checkpoint_interval == 0 or epoch == epochs:
             print('Saving checkpoint...', end='')
             torch.save(model.state_dict(),
                        path.join(checkpoint_path, f'{model_name}_checkpoint_{epoch}.model'))
