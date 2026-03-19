@@ -49,6 +49,23 @@ def set_torch_seed(seed: int):
     torch.cuda.manual_seed_all(seed)
 
 
+def _add_scalars(writer: SummaryWriter | None, tag: str, scalars: dict[str, int | float], step: int):
+    """
+    Add scalars in tensorboard SummaryWriter.
+
+    Args:
+        writer: Tensorboard summary writer.
+        tag: Tag of category.
+        scalars: dict of scalar values
+        step: Step value to record
+    """
+    if not writer:
+        return
+
+    for name, value in scalars.items():
+        writer.add_scalar(f'{tag}/{name}', value, step, new_style=True)
+
+
 def train(
         model: nn.Module,
         train_loader: DataLoader,
@@ -147,11 +164,8 @@ def train(
 
         # Average train batches and log to history
         avg_train_metrics = history.commit(prefix='train_')
-        avg_train_loss = avg_train_metrics.pop('loss')
-
-        if summary_writer:
-            summary_writer.add_scalar('train/loss', avg_train_loss, epoch)
-            summary_writer.add_scalars('train', avg_train_metrics, epoch)
+        # Log averaged metrics to tensorboard
+        _add_scalars(summary_writer, 'train', avg_train_metrics, epoch)
 
         # --- Validation ---
         model.eval()
@@ -181,11 +195,8 @@ def train(
 
         # Average validation batches and log to history
         avg_val_metrics = history.commit(prefix='val_')
-        avg_val_loss = avg_val_metrics.pop('loss')
-
-        if summary_writer:
-            summary_writer.add_scalar('validation/loss', avg_val_loss, epoch)
-            summary_writer.add_scalars('validation', avg_val_metrics, epoch)
+        # Log averaged metrics to tensorboard
+        _add_scalars(summary_writer, 'validation', avg_train_metrics, epoch)
 
         # Print epoch summary if verbose
         if verbose:
@@ -197,9 +208,7 @@ def train(
                 [f'Val {name}: {value:.4f}'
                  for name, value in avg_val_metrics.items()]
             )
-            print(f'Epoch {epoch:3d} | '
-                  f'Train Loss: {avg_train_loss:.4f} | {train_metric_str} | '
-                  f'Val Loss: {avg_val_loss:.4f} | {val_metric_str}')
+            print(f'Epoch {epoch:3d} | {train_metric_str} | {val_metric_str}')
 
         # Save checkpoint if interval
         if epoch % checkpoint_interval == 0 or epoch == epochs:
