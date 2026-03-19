@@ -13,7 +13,7 @@ from utils.sampler import DomainBatchSampler
 from utils.transforms import base_transforms, train_transforms
 from utils.criterion import MMD
 from utils.metrics import bundle, metrics_with_mask, accuracy, mmd
-from utils.trainer import train, set_torch_seed
+from utils.trainer import train, set_train_seed
 
 from methods import TrainArgs, register
 
@@ -65,7 +65,7 @@ class Criterion(nn.Module):
 
 @register('resnet50_mmd')
 def resnet50_mmd(args: TrainArgs):
-    set_torch_seed(args['seed'])
+    set_train_seed(args['seed'])
 
     if not torch.cuda.is_available() and args['device'].startswith('cuda'):
         raise Exception('cuda is not available')

@@ -34,13 +34,20 @@ class tqdmd(tqdm):
         return super().display(msg, pos)
 
 
-def set_torch_seed(seed: int):
+def set_train_seed(seed: int):
     """
     Set seed in the pytorch framework.
 
     Args:
         seed: Seed to set.
     """
+    import random
+    import numpy
+
+    # Common libs
+    random.seed(seed)
+    numpy.random.seed(seed)
+
     # PyTorch CPU
     torch.manual_seed(seed)
 

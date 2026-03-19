@@ -11,7 +11,7 @@ from torchvision.models import vit_b_16
 from utils.dataset import BaseImageFolderDataset
 from utils.transforms import base_transforms, train_transforms
 from utils.metrics import accuracy
-from utils.trainer import train, set_torch_seed
+from utils.trainer import train, set_train_seed
 
 from methods import TrainArgs, register
 
@@ -30,7 +30,7 @@ class VisDA2017Validation(BaseImageFolderDataset):
 
 @register('vitb16_pretrain')
 def vitb16_pretrain(args: TrainArgs):
-    set_torch_seed(args['seed'])
+    set_train_seed(args['seed'])
 
     if not torch.cuda.is_available() and args['device'].startswith('cuda'):
         raise Exception('cuda is not available')
