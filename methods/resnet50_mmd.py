@@ -12,7 +12,7 @@ from utils.dataset import BaseImageFolderDataset, DomainDataset
 from utils.sampler import DomainBatchSampler
 from utils.transforms import base_transforms, train_transforms
 from utils.criterion import MMD
-from utils.metrics import accuracy
+from utils.metrics import bundle, metrics_with_mask, accuracy, mmd
 from utils.trainer import train, set_torch_seed
 
 from methods import TrainArgs, register
@@ -63,20 +63,8 @@ class Criterion(nn.Module):
         return cls_loss + self.lambda_mmd * mmd
 
 
-def metrics_with_mask(orig_metrics_fn):
-    def wrapped(pred, y):
-        mask = (y != -1)
-        if mask.sum() == 0:
-            zeroed = {k: 0.0 for k in orig_metrics_fn(torch.zeros(
-                1, pred.size(1)), torch.zeros(1, dtype=torch.long)).keys()}
-            return zeroed
-        return orig_metrics_fn(pred[mask], y[mask])
-
-    return wrapped
-
-
 @register('resnet50_mmd')
-def vitb16_pretrain(args: TrainArgs):
+def resnet50_mmd(args: TrainArgs):
     set_torch_seed(args['seed'])
 
     if not torch.cuda.is_available() and args['device'].startswith('cuda'):
@@ -122,9 +110,10 @@ def vitb16_pretrain(args: TrainArgs):
         lambda m, i, o: setattr(model, '_features', torch.flatten(o, 1))
     )
 
-    # Setup optimizer and loss
+    # Setup optimizer, loss and metrics
     optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'])
     loss = Criterion(model, lambda_mmd=0.5)
+    metrics = bundle([metrics_with_mask(accuracy), mmd])
 
     # Prepare arguments
     summary_writer = SummaryWriter(os.path.join(args['logs'], args['name']))
@@ -138,7 +127,7 @@ def vitb16_pretrain(args: TrainArgs):
         val_dataloader,
         optimizer,
         loss,
-        metrics_with_mask(accuracy),
+        metrics,
         epochs=args['epochs'],
         start_epoch=args['start_epoch'],
         checkpoint_interval=args['checkpoint_interval'],

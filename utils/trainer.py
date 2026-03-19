@@ -196,7 +196,7 @@ def train(
         # Average validation batches and log to history
         avg_val_metrics = history.commit(prefix='val_')
         # Log averaged metrics to tensorboard
-        _add_scalars(summary_writer, 'validation', avg_train_metrics, epoch)
+        _add_scalars(summary_writer, 'validation', avg_val_metrics, epoch)
 
         # Print epoch summary if verbose
         if verbose:
