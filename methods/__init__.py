@@ -7,6 +7,7 @@ from typing import Callable, Any, TypedDict
 class TrainArgs(TypedDict):
     name: str
     data: str
+    logs: str
     epochs: int
     start_epoch: int
     batch_size: int

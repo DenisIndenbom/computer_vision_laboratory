@@ -18,6 +18,14 @@ def validate_args(args: argparse.Namespace):
         print('Error: --data must be a directory.')
         sys.exit(1)
 
+    if not args.logs.exists():
+        print('Error: --logs not found.')
+        sys.exit(1)
+
+    if not args.logs.is_dir():
+        print('Error: --logs must be a directory.')
+        sys.exit(1)
+
     if args.epochs <= 0:
         print('Error: --epochs must be a positive integer.')
         sys.exit(1)
@@ -83,6 +91,11 @@ def main():
         type=Path, default=Path('./data'),
         help='Path to the dataset directory.'
     )
+    parser.add_argument(
+        '--logs', '-l',
+        type=Path, default=Path('./logs'),
+        help='Path to the tensorboard logs directory.'
+    )
 
     # Training hyperparameters
     train_group = parser.add_argument_group('Training hyperparameters')
@@ -111,7 +124,7 @@ def main():
         help='Random seed.'
     )
 
-    # Checkpointing & logging
+    # Checkpointing
     ckpt_group = parser.add_argument_group('Checkpointing')
     ckpt_group.add_argument(
         '--checkpoint_path', type=Path, default=Path('./checkpoints'),
@@ -148,6 +161,7 @@ def main():
     train_args: TrainArgs = {
         'name': args.name,
         'data': str(args.data),
+        'logs': str(args.logs),
         'epochs': args.epochs,
         'start_epoch': args.start_epoch,
         'batch_size': args.batch_size,
@@ -159,8 +173,6 @@ def main():
         'verbose': args.verbose,
         'device': args.device,
     }
-
-    print(train_args)
 
     # Launch training
     METHOD_REGISTRY[args.trainer](train_args)

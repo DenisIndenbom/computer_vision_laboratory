@@ -64,7 +64,10 @@ def vitb16_pretrain(args: TrainArgs):
     optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'])
     loss = nn.CrossEntropyLoss()
 
-    summary_writer = SummaryWriter(os.path.join('./logs', args['name']))
+    # Prepare arguments
+    summary_writer = SummaryWriter(os.path.join(args['logs'], args['name']))
+    checkpoint_path = os.path.join(args['checkpoint_path'], args['name'])
+    device = torch.device(args['device'])
 
     # Launch training
     train(
@@ -77,11 +80,8 @@ def vitb16_pretrain(args: TrainArgs):
         epochs=args['epochs'],
         start_epoch=args['start_epoch'],
         checkpoint_interval=args['checkpoint_interval'],
-        checkpoint_path=os.path.join(
-            args['checkpoint_path'],
-            args['name']
-        ),
-        device=torch.device(args['device']),
+        checkpoint_path=checkpoint_path,
+        device=device,
         summary_writer=summary_writer,
         verbose=args['verbose']
     )
