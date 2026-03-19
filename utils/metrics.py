@@ -113,6 +113,6 @@ def mmd(output: Tensor, target: Tensor) -> dict[str, int | float]:
         source_d = output[mask]
         target_d = output[~mask]
 
-        res = mmd_criterion(source_d, target_d)
+        res = mmd_criterion(source_d, target_d).item()
 
     return {'mmd': res}
