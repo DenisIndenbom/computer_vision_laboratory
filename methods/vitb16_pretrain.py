@@ -32,12 +32,15 @@ class VisDA2017Validation(BaseImageFolderDataset):
 def vitb16_pretrain(args: TrainArgs):
     set_torch_seed(args['seed'])
 
+    if not torch.cuda.is_available() and args['device'].startswith('cuda'):
+        raise Exception('cuda is not available')
+
     # Load datasets
     train_dataset = VisDA2017Train(
-        './data', transform=train_transforms, download=True
+        args['data'], transform=train_transforms, download=True
     )
     val_dataset = VisDA2017Validation(
-        './data', transform=base_transforms, download=True
+        args['data'], transform=base_transforms, download=True
     )
 
     # Setup dataloaders
@@ -45,12 +48,12 @@ def vitb16_pretrain(args: TrainArgs):
         dataset=train_dataset,
         batch_size=args['batch_size'],
         shuffle=True,
-        num_workers=4,
+        num_workers=args['workers'],
         pin_memory=True,
     )
     val_dataloader = DataLoader(
         dataset=val_dataset,
-        batch_size=args['batch_size'],
+        batch_size=args['workers'],
         shuffle=False,
         num_workers=4,
         pin_memory=True,
@@ -61,8 +64,9 @@ def vitb16_pretrain(args: TrainArgs):
     optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'])
     loss = nn.CrossEntropyLoss()
 
-    summary_writer = SummaryWriter(os.path.join('./logs', args['run_name']))
+    summary_writer = SummaryWriter(os.path.join('./logs', args['name']))
 
+    # Launch training
     train(
         model,
         train_dataloader,
@@ -73,7 +77,11 @@ def vitb16_pretrain(args: TrainArgs):
         epochs=args['epochs'],
         start_epoch=args['start_epoch'],
         checkpoint_interval=args['checkpoint_interval'],
-        checkpoint_path=args['checkpoint_path'],
-        device=torch.device('cuda:0'),
-        summary_writer=summary_writer
+        checkpoint_path=os.path.join(
+            args['checkpoint_path'],
+            args['name']
+        ),
+        device=torch.device(args['device']),
+        summary_writer=summary_writer,
+        verbose=args['verbose']
     )

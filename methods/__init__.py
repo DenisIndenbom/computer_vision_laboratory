@@ -5,15 +5,17 @@ from typing import Callable, Any, TypedDict
 
 
 class TrainArgs(TypedDict):
-    run_name: str
+    name: str
+    data: str
     epochs: int
     start_epoch: int
     batch_size: int
     learning_rate: float
     workers: int
     seed: int
-    checkpoint_interval: int
     checkpoint_path: str
+    checkpoint_interval: int
+    device: str
     verbose: bool
 
 

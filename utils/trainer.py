@@ -118,6 +118,7 @@ def train(
             train_loader,
             desc=f'Epoch {epoch}/{epochs} [Train]',
             leave=False,
+            disable=not verbose
         )
         for x_batch, y_batch in train_loop:
             # Zero gradient
@@ -158,7 +159,8 @@ def train(
         val_loop = tqdmd(
             val_loader,
             desc=f'Epoch {epoch}/{epochs} [Val]',
-            leave=False
+            leave=False,
+            disable=not verbose
         )
         with torch.no_grad():
             for x_batch, y_batch in val_loop:

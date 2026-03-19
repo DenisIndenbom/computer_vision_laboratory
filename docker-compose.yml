@@ -30,15 +30,17 @@ services:
 
     command: >
       python train.py
-      --method ${METHOD}
-      --name ${RUN_NAME}
+      --trainer ${METHOD}
+      --name ${NAME}
       --epochs ${EPOCHS}
       --start_epoch ${START_EPOCH}
       --batch_size ${BATCH_SIZE}
       --learning_rate ${LEARNING_RATE}
       --workers ${WORKERS}
+      --seed ${SEED}
       --checkpoint_interval ${CHECKPOINT_INTERVAL}
-      --verbose ${VERBOSE}
+      --device ${DEVICE}
+      --verbose
 
   tensorboard:
     container_name: "deindenbom-cvlab-tensorboard"
