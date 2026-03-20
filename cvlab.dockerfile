@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:2.10.0-cuda12.6-cudnn9-runtime
+FROM pytorch/pytorch:2.10.0-cuda13-cudnn9-runtime
 
 WORKDIR /cvlab
 

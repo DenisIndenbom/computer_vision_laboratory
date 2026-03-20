@@ -53,12 +53,15 @@ class Criterion(nn.Module):
         mmd = torch.tensor(0, device=y.device)
 
         if (~mask).sum() > 0:
-            features = self.model._features
+            feat_l1 = self.model._feat_l1
+            feat_l3 = self.model._feat_l3
+            feat_fl = self.model._features
 
-            feat_s = features[mask]
-            feat_t = features[~mask]
+            mmd_1 = self.mmd(feat_l1[mask], feat_l1[~mask])
+            mmd_2 = self.mmd(feat_l3[mask], feat_l3[~mask])
+            mmd_3 = self.mmd(feat_fl[mask], feat_fl[~mask])
 
-            mmd = self.mmd(feat_s, feat_t)
+            mmd = 0.3 * mmd_1 + 0.5 * mmd_2 + 1.0 * mmd_3
 
         return cls_loss + self.lambda_mmd * mmd
 
@@ -106,6 +109,12 @@ def resnet50_mmd(args: TrainArgs):
 
     # Setup model
     model = resnet50(num_classes=12)
+    model.layer1.register_forward_hook(
+        lambda m, i, o: setattr(model, '_feat_l1', o.mean([2, 3]))
+    )
+    model.layer3.register_forward_hook(
+        lambda m, i, o: setattr(model, '_feat_l3', o.mean([2, 3]))
+    )
     model.avgpool.register_forward_hook(
         lambda m, i, o: setattr(model, '_features', torch.flatten(o, 1))
     )
