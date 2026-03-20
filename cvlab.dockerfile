@@ -11,7 +11,7 @@ ENV PYTHONUNBUFFERED=1
 ENV RUNNING_IN_DOCKER=true
 
 COPY docker-requirements.txt .
-RUN pip install --no-cache-dir -r docker-requirements.txt
+RUN pip install --no-cache-dir -r docker-requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
 
 COPY . .
 
