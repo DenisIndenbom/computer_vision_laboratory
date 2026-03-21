@@ -61,7 +61,7 @@ class Criterion(nn.Module):
             mmd_2 = self.mmd(feat_l3[mask], feat_l3[~mask])
             mmd_3 = self.mmd(feat_fl[mask], feat_fl[~mask])
 
-            mmd = 0.3 * mmd_1 + 0.5 * mmd_2 + 1.0 * mmd_3
+            mmd = 0.2 * mmd_1 + 0.4 * mmd_2 + 0.4 * mmd_3
 
         return cls_loss + self.lambda_mmd * mmd
 
