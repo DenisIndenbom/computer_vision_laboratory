@@ -60,14 +60,10 @@ class Criterion(nn.Module):
             mmd_1 = self.mmd(feat_l1[mask], feat_l1[~mask])
             mmd_2 = self.mmd(feat_l3[mask], feat_l3[~mask])
             mmd_3 = self.mmd(feat_fl[mask], feat_fl[~mask])
-            
-            w1 = 1.0 / (mmd_1.detach() + 1e-6)
-            w2 = 1.0 / (mmd_2.detach() + 1e-6)
-            w3 = 1.0 / (mmd_3.detach() + 1e-6)
-            w_sum = w1 + w2 + w3
-            w1, w2, w3 = w1 / w_sum, w2 / w_sum, w3 / w_sum
 
-            mmd = w1 * mmd_1 + w2 * mmd_2 + w3 * mmd_3
+            mmd_s = torch.stack([mmd_1, mmd_2, mmd_3])
+            weights = torch.softmax(mmd_s.detach(), dim=0)
+            mmd = (weights * mmd_s).sum()
 
         return cls_loss + self.lambda_mmd * mmd
 
