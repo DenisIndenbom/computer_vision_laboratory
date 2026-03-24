@@ -14,6 +14,7 @@ from utils.transforms import base_transforms, train_transforms
 from utils.criterion import MMD
 from utils.metrics import bundle, metrics_with_mask, accuracy, mmd
 from utils.trainer import train, set_train_seed
+from utils.typing import TrainHookF
 
 from methods import TrainArgs, register
 
@@ -66,6 +67,15 @@ class Criterion(nn.Module):
             mmd = (weights * mmd_s).sum()
 
         return cls_loss + self.lambda_mmd * mmd
+
+
+def build_hook() -> TrainHookF:
+    def hook(epoch: int,
+             model: nn.Module,
+             optim: optim.Optimizer,
+             criterion: nn.Module) -> None: ...
+
+    return hook
 
 
 @register('resnet50_mmd')
@@ -145,5 +155,6 @@ def resnet50_mmd(args: TrainArgs):
         checkpoint_path=checkpoint_path,
         device=device,
         summary_writer=summary_writer,
-        verbose=args['verbose']
+        verbose=args['verbose'],
+        post_epoch_hook=build_hook()
     )

@@ -1,5 +1,4 @@
 from os import path, environ
-from typing import Callable
 
 import torch
 import torch.nn as nn
@@ -9,6 +8,8 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from tqdm import tqdm
+
+from .typing import MetricF, TrainHookF
 
 from .history import History
 
@@ -79,14 +80,15 @@ def train(
         val_loader: DataLoader,
         optimizer: Optimizer,
         criterion: nn.Module,
-        metrics: Callable[[torch.Tensor, torch.Tensor], dict[str, float]],
+        metrics: MetricF,
         epochs: int,
         start_epoch: int = 0,
         checkpoint_interval: int = 5,
         checkpoint_path: str = '.',
         device: torch.device = torch.device('cpu'),
         summary_writer: SummaryWriter | None = None,
-        verbose: bool = True) -> dict[str, list[int | float | None]]:
+        verbose: bool = True,
+        post_epoch_hook: TrainHookF | None = None) -> dict[str, list[int | float | None]]:
     """
     Train the classification model for a given number of epochs, evaluating on the validation set after each epoch.
 
@@ -205,6 +207,9 @@ def train(
         # Log averaged metrics to tensorboard
         _add_scalars(summary_writer, 'validation', avg_val_metrics, epoch)
 
+        if post_epoch_hook is not None:
+            post_epoch_hook(epoch, model, optimizer, criterion)
+
         # Print epoch summary if verbose
         if verbose:
             train_metric_str = ' | '.join(
@@ -238,7 +243,7 @@ def train(
 
 def test(model: nn.Module,
          dataloader: DataLoader,
-         metrics: Callable[[torch.Tensor, torch.Tensor], dict[str, float]],
+         metrics: MetricF,
          device: torch.device = torch.device('cpu')) -> dict[str, float]:
     """
     Evaluate the classification model on a test set.

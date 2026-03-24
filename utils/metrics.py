@@ -1,14 +1,12 @@
 from torch import Tensor, no_grad
 from torch import long, zeros
 
-from typing import Callable
+from .typing import MetricF
 
 from .criterion import MMD
 
-MetricFunc = Callable[[Tensor, Tensor], dict[str, int | float]]
 
-
-def bundle(metrics: list[MetricFunc]) -> MetricFunc:
+def bundle(metrics: list[MetricF]) -> MetricF:
     """
     Combines multiple metric functions into a single function.
 
@@ -27,7 +25,7 @@ def bundle(metrics: list[MetricFunc]) -> MetricFunc:
     return combined
 
 
-def metrics_with_mask(orig_metrics_fn: MetricFunc) -> MetricFunc:
+def metrics_with_mask(orig_metrics_fn: MetricF) -> MetricF:
     """
     Wraps a metrics function to ignore masked targets.
 
