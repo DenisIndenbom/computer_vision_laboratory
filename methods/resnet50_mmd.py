@@ -8,6 +8,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 from torchvision.models import resnet50
 
+from typing import cast
+
 from utils.dataset import BaseImageFolderDataset, DomainDataset
 from utils.sampler import DomainBatchSampler
 from utils.transforms import base_transforms, train_transforms
@@ -69,21 +71,34 @@ class Criterion(nn.Module):
         return cls_loss + self.lambda_mmd * mmd
 
 
-def build_hook() -> TrainHookF:
-    def hook(epoch: int,
-             model: nn.Module,
-             optim: optim.Optimizer,
-             criterion: nn.Module) -> None: ...
+def build_hook(start_lambda: float, end_lambda: float, end_epoch: int) -> TrainHookF:
+    def hook(
+        epoch: int,
+        model: nn.Module,
+        optim: optim.Optimizer,
+        criterion: nn.Module
+    ) -> None:
+        t = min(epoch / end_epoch, 1.0)
+        new_lambda = start_lambda + t * (end_lambda - start_lambda)
+
+        cast(Criterion, criterion).lambda_mmd = new_lambda
+        print(f'New lambda: {new_lambda}')
 
     return hook
 
 
 @register('resnet50_mmd')
 def resnet50_mmd(args: TrainArgs):
-    set_train_seed(args['seed'])
-
     if not torch.cuda.is_available() and args['device'].startswith('cuda'):
         raise Exception('cuda is not available')
+
+    # Set train seed
+    set_train_seed(args['seed'])
+
+    # Load env vars
+    mmd_lambda_start = float(os.getenv('MMD_LAMBDA_START', 0.5))
+    mmd_lambda_end = float(os.getenv('MMD_LAMBDA_END', 0.5))
+    mmd_ramp_epochs = int(os.getenv('MMD_RAMP_EPOCHS', 0))
 
     # Load datasets
     source_dataset = VisDA2017Source(
@@ -133,8 +148,13 @@ def resnet50_mmd(args: TrainArgs):
 
     # Setup optimizer, loss and metrics
     optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'])
-    loss = Criterion(model, lambda_mmd=0.5)
+    loss = Criterion(model, lambda_mmd=mmd_lambda_start)
     metrics = bundle([metrics_with_mask(accuracy), mmd])
+
+    # Setup hook for updating lambda
+    hook = build_hook(mmd_lambda_start,
+                      mmd_lambda_end,
+                      mmd_ramp_epochs) if mmd_ramp_epochs else None
 
     # Prepare arguments
     summary_writer = SummaryWriter(os.path.join(args['logs'], args['name']))
@@ -156,5 +176,5 @@ def resnet50_mmd(args: TrainArgs):
         device=device,
         summary_writer=summary_writer,
         verbose=args['verbose'],
-        post_epoch_hook=build_hook()
+        post_epoch_hook=hook
     )
