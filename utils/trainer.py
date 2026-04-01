@@ -1,3 +1,6 @@
+import random
+import numpy as np
+
 from os import path, environ
 
 import torch
@@ -12,6 +15,64 @@ from tqdm import tqdm
 from .typing import MetricF, TrainHookF
 
 from .history import History
+
+
+def _add_scalars(writer: SummaryWriter | None, tag: str, scalars: dict[str, int | float], step: int):
+    """
+    Add scalars in tensorboard SummaryWriter.
+
+    Args:
+        writer: Tensorboard summary writer.
+        tag: Tag of category.
+        scalars: dict of scalar values
+        step: Step value to record
+    """
+    if not writer:
+        return
+
+    for name, value in scalars.items():
+        writer.add_scalar(f'{tag}/{name}', value, step, new_style=True)
+
+
+def _save_random_state(filepath: str):
+    """
+    Save the current random states of PyTorch (CPU and CUDA) and the random module
+    to a file using torch.save.
+
+    Args:
+        filepath: Destination file path (e.g., "random_state.pt").
+    """
+    state = {
+        'torch': torch.random.get_rng_state(),          # CPU state
+        'random': random.getstate(),                    # Python's random state
+        'numpy': np.random.get_state()                  # Numpy's random state
+    }
+
+    if torch.cuda.is_available():
+        # state of all CUDA devices
+        state['torch_cuda'] = torch.cuda.get_rng_state_all()
+
+    torch.save(state, filepath)
+
+
+def _load_random_state(filepath: str):
+    """
+    Load random states from a file and restore them.
+
+    Args:
+        filepath: Path to the file previously created by save_random_state().
+    """
+    if not path.exists(filepath):
+        return
+
+    state = torch.load(filepath)
+
+    torch.random.set_rng_state(state['torch'])
+    random.setstate(state['random'])
+    np.random.set_state(state['numpy'])
+
+    if 'torch_cuda' in state:
+        torch.cuda.set_rng_state_all(state['torch_cuda'])
 
 
 class tqdmd(tqdm):
@@ -42,12 +103,9 @@ def set_train_seed(seed: int):
     Args:
         seed: Seed to set.
     """
-    import random
-    import numpy
-
     # Common libs
     random.seed(seed)
-    numpy.random.seed(seed)
+    np.random.seed(seed)
 
     # PyTorch CPU
     torch.manual_seed(seed)
@@ -55,23 +113,6 @@ def set_train_seed(seed: int):
     # PyTorch CUDA
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-
-
-def _add_scalars(writer: SummaryWriter | None, tag: str, scalars: dict[str, int | float], step: int):
-    """
-    Add scalars in tensorboard SummaryWriter.
-
-    Args:
-        writer: Tensorboard summary writer.
-        tag: Tag of category.
-        scalars: dict of scalar values
-        step: Step value to record
-    """
-    if not writer:
-        return
-
-    for name, value in scalars.items():
-        writer.add_scalar(f'{tag}/{name}', value, step, new_style=True)
 
 
 def train(
@@ -132,6 +173,8 @@ def train(
             torch.load(path.join(checkpoint_path, f'{model_name}_checkpoint_{start_epoch}.model')))
         optimizer.load_state_dict(
             torch.load(path.join(checkpoint_path, f'{model_name}_checkpoint_{start_epoch}.optim')))
+        _load_random_state(
+            path.join(checkpoint_path, f'{model_name}_checkpoint_{start_epoch}.rng'))
         history.load(path.join(checkpoint_path,
                      f'{model_name}_checkpoint_{start_epoch}.metrics'))
         print('OK')
@@ -229,6 +272,8 @@ def train(
                        path.join(checkpoint_path, f'{model_name}_checkpoint_{epoch}.model'))
             torch.save(optimizer.state_dict(),
                        path.join(checkpoint_path, f'{model_name}_checkpoint_{epoch}.optim'))
+            _save_random_state(
+                path.join(checkpoint_path, f'{model_name}_checkpoint_{epoch}.rng'))
             history.dump(path.join(checkpoint_path,
                          f'{model_name}_checkpoint_{epoch}.metrics'))
             print('OK')
