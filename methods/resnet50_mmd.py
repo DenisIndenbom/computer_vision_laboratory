@@ -78,7 +78,7 @@ def build_hook(start_lambda: float, end_lambda: float, start_epoch: int, end_epo
         optim: optim.Optimizer,
         criterion: nn.Module
     ) -> None:
-        t = min(epoch / end_epoch, 1.0) if epoch >= start_epoch else 0.0
+        t = min(max((epoch - start_epoch) / (end_epoch - start_epoch), 0.0), 1.0)
         new_lambda = start_lambda + t * (end_lambda - start_lambda)
 
         cast(Criterion, criterion).lambda_mmd = new_lambda
