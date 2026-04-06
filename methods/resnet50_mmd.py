@@ -12,7 +12,7 @@ from typing import cast
 
 from utils.dataset import BaseImageFolderDataset, DomainDataset
 from utils.sampler import DomainBatchSampler
-from utils.transforms import base_transforms, train_transforms
+from utils.transforms import base_transforms, train_source_transforms, train_target_transforms
 from utils.criterion import MMD
 from utils.metrics import bundle, metrics_with_mask, accuracy, mmd
 from utils.trainer import train
@@ -71,14 +71,14 @@ class Criterion(nn.Module):
         return cls_loss + self.lambda_mmd * mmd
 
 
-def build_hook(start_lambda: float, end_lambda: float, end_epoch: int) -> TrainHookF:
+def build_hook(start_lambda: float, end_lambda: float, start_epoch: int, end_epoch: int) -> TrainHookF:
     def hook(
         epoch: int,
         model: nn.Module,
         optim: optim.Optimizer,
         criterion: nn.Module
     ) -> None:
-        t = min(epoch / end_epoch, 1.0)
+        t = min(epoch / end_epoch, 1.0) if epoch >= start_epoch else 0.0
         new_lambda = start_lambda + t * (end_lambda - start_lambda)
 
         cast(Criterion, criterion).lambda_mmd = new_lambda
@@ -95,14 +95,15 @@ def resnet50_mmd(args: TrainArgs):
     # Load env vars
     mmd_lambda_start = float(os.getenv('MMD_LAMBDA_START', 0.5))
     mmd_lambda_end = float(os.getenv('MMD_LAMBDA_END', 0.5))
+    mmd_start_epoch = int(os.getenv('MMD_START_EPOCH', 0))
     mmd_ramp_epochs = int(os.getenv('MMD_RAMP_EPOCHS', 0))
 
     # Load datasets
     source_dataset = VisDA2017Source(
-        args['data'], transform=train_transforms, download=True
+        args['data'], transform=train_source_transforms, download=True
     )
     target_dataset = VisDA2017Target(
-        args['data'], transform=train_transforms, download=True
+        args['data'], transform=train_target_transforms, download=True
     )
     val_dataset = VisDA2017Validation(
         args['data'], transform=base_transforms, download=True
@@ -149,9 +150,14 @@ def resnet50_mmd(args: TrainArgs):
     metrics = bundle([metrics_with_mask(accuracy), mmd])
 
     # Setup hook for updating lambda
-    hook = build_hook(mmd_lambda_start,
-                      mmd_lambda_end,
-                      mmd_ramp_epochs) if mmd_ramp_epochs else None
+    hook = None
+    if mmd_ramp_epochs > 0:
+        hook = build_hook(
+            mmd_lambda_start,
+            mmd_lambda_end,
+            mmd_start_epoch,
+            mmd_start_epoch + mmd_ramp_epochs
+        )
 
     # Prepare arguments
     summary_writer = SummaryWriter(os.path.join(args['logs'], args['name']))

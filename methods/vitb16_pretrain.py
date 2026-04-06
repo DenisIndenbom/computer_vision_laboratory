@@ -9,7 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision.models import vit_b_16
 
 from utils.dataset import BaseImageFolderDataset
-from utils.transforms import base_transforms, train_transforms
+from utils.transforms import base_transforms, train_source_transforms
 from utils.metrics import accuracy
 from utils.trainer import train
 
@@ -35,7 +35,7 @@ def vitb16_pretrain(args: TrainArgs):
 
     # Load datasets
     train_dataset = VisDA2017Train(
-        args['data'], transform=train_transforms, download=True
+        args['data'], transform=train_source_transforms, download=True
     )
     val_dataset = VisDA2017Validation(
         args['data'], transform=base_transforms, download=True
