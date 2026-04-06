@@ -34,6 +34,12 @@ def _add_scalars(writer: SummaryWriter | None, tag: str, scalars: dict[str, int 
         writer.add_scalar(f'{tag}/{name}', value, step, new_style=True)
 
 
+def _get_np_state():
+    state = list(np.random.get_state())
+    state[1] = state[1].tolist()  # type: ignore
+    return tuple(state)
+
+
 def _set_seed(seed: int):
     """
     Set seed in the pytorch framework.
@@ -64,7 +70,7 @@ def _save_random_state(filepath: str):
     state = {
         'torch': torch.random.get_rng_state(),          # CPU state
         'random': random.getstate(),                    # Python's random state
-        'numpy': np.random.get_state()                  # Numpy's random state
+        'numpy': _get_np_state()                        # Numpy's random state
     }
 
     if torch.cuda.is_available():
