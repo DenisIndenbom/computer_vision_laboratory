@@ -15,7 +15,7 @@ from utils.sampler import DomainBatchSampler
 from utils.transforms import base_transforms, train_transforms
 from utils.criterion import MMD
 from utils.metrics import bundle, metrics_with_mask, accuracy, mmd
-from utils.trainer import train, set_train_seed
+from utils.trainer import train
 from utils.typing import TrainHookF
 
 from methods import TrainArgs, register
@@ -91,9 +91,6 @@ def build_hook(start_lambda: float, end_lambda: float, end_epoch: int) -> TrainH
 def resnet50_mmd(args: TrainArgs):
     if not torch.cuda.is_available() and args['device'].startswith('cuda'):
         raise Exception('cuda is not available')
-
-    # Set train seed
-    set_train_seed(args['seed'])
 
     # Load env vars
     mmd_lambda_start = float(os.getenv('MMD_LAMBDA_START', 0.5))
@@ -174,7 +171,8 @@ def resnet50_mmd(args: TrainArgs):
         checkpoint_interval=args['checkpoint_interval'],
         checkpoint_path=checkpoint_path,
         device=device,
-        summary_writer=summary_writer,
+        seed=args['seed'],
         verbose=args['verbose'],
+        summary_writer=summary_writer,
         post_epoch_hook=hook
     )

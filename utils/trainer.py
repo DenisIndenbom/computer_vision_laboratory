@@ -34,6 +34,25 @@ def _add_scalars(writer: SummaryWriter | None, tag: str, scalars: dict[str, int 
         writer.add_scalar(f'{tag}/{name}', value, step, new_style=True)
 
 
+def _set_seed(seed: int):
+    """
+    Set seed in the pytorch framework.
+
+    Args:
+        seed: Seed to set.
+    """
+    # Common libs
+    random.seed(seed)
+    np.random.seed(seed)
+
+    # PyTorch CPU
+    torch.manual_seed(seed)
+
+    # PyTorch CUDA
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+
 def _save_random_state(filepath: str):
     """
     Save the current random states of PyTorch (CPU and CUDA) and the random module
@@ -96,25 +115,6 @@ class tqdmd(tqdm):
         return super().display(msg, pos)
 
 
-def set_train_seed(seed: int):
-    """
-    Set seed in the pytorch framework.
-
-    Args:
-        seed: Seed to set.
-    """
-    # Common libs
-    random.seed(seed)
-    np.random.seed(seed)
-
-    # PyTorch CPU
-    torch.manual_seed(seed)
-
-    # PyTorch CUDA
-    torch.cuda.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-
-
 def train(
         model: nn.Module,
         train_loader: DataLoader,
@@ -127,8 +127,9 @@ def train(
         checkpoint_interval: int = 5,
         checkpoint_path: str = '.',
         device: torch.device = torch.device('cpu'),
-        summary_writer: SummaryWriter | None = None,
+        seed: int | None = None,
         verbose: bool = True,
+        summary_writer: SummaryWriter | None = None,
         post_epoch_hook: TrainHookF | None = None) -> dict[str, list[int | float | None]]:
     """
     Train the classification model for a given number of epochs, evaluating on the validation set after each epoch.
@@ -145,7 +146,10 @@ def train(
         checkpoint_interval: Interval of epochs for saving the model
         checkpoint_path: Path for saving the model
         device: Device on which to perform computation.
+        seed: Random seed for training reproducibility.
         verbose: If True, print per-epoch metrics.
+        summary_writer: Tensorboard summary writer.
+        post_epoch_hook: A hook function that is called at the end of each training epoch.
 
     Returns:
         Dictionary containing lists of metrics for each epoch.
@@ -165,6 +169,10 @@ def train(
 
     # Move model to device
     model.to(device)
+
+    # Set seed if specified
+    if seed is not None:
+        _set_seed(seed)
 
     # Load checkpoint if specified
     if start_epoch > 0:
