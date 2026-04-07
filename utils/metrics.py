@@ -3,7 +3,7 @@ from torch import long, zeros
 
 from .typing import MetricF
 
-from .criterion import MMD
+from .criterion import MMD, Coral
 
 
 def bundle(metrics: list[MetricF]) -> MetricF:
@@ -114,3 +114,35 @@ def mmd(output: Tensor, target: Tensor) -> dict[str, int | float]:
         res = mmd_criterion(source_d, target_d).item()
 
     return {'mmd': res}
+
+
+def coral(output: Tensor, target: Tensor) -> dict[str, int | float]:
+    """
+    Computes Coral between source and target.
+
+    Splits `output` into source (`target != -1`) and target (`target == -1`)
+    subsets. Returns an empty dict if either subset is missing.
+
+    Args:
+        output: Model outputs.
+        target: Labels with -1 indicating target domain.
+
+    Returns:
+        Dict with key 'coral' and computed value, or empty dict.
+    """
+    mask = (target != -1).detach()
+    has_source = mask.any()
+    has_target = (~mask).any()
+
+    if not (has_source and has_target):
+        return {}
+
+    coral_criterion = Coral()
+
+    with no_grad():
+        source_d = output[mask]
+        target_d = output[~mask]
+
+        res = coral_criterion(source_d, target_d).item()
+
+    return {'coral': res}
