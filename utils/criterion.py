@@ -79,7 +79,7 @@ class Coral(nn.Module):
         # Calculate the difference between matrices
         diff = (source_c - target_c)
 
-        return torch.mean(torch.mul(diff, diff)) / (4 * d * d)
+        return (diff * diff).sum() / (4 * d * d)
 
     def _covariance(self, x: torch.Tensor) -> torch.Tensor:
         # Center the data around the origin
