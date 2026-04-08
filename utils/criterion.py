@@ -51,7 +51,7 @@ class MMD(nn.Module):
 
     def forward(self, source: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """
-        Computes unbiased MMD^2 between source and target.
+        Computes biased MMD^2 between source and target.
         """
         n = source.size(0)
         m = target.size(0)
