@@ -1,5 +1,5 @@
 import torch
-from torch.utils.data import Sampler, get_worker_info
+from torch.utils.data import Sampler
 
 from typing import Iterator
 
@@ -13,8 +13,8 @@ class DomainBatchSampler(Sampler):
 
     def __init__(self, source_size: int, target_size: int, batch_size: int, shuffle: bool = True):
         assert batch_size % 2 == 0, 'batch_size must be even'
-        assert (source_size >= batch_size // 2), 'source_size too small for domain_batch_size'
-        assert (target_size >= batch_size // 2), 'target_size too small for domain_batch_size'
+        assert source_size >= batch_size // 2, 'source_size too small for domain_batch_size'
+        assert target_size >= batch_size // 2, 'target_size too small for domain_batch_size'
 
         self.source_size = source_size
         self.target_size = target_size
@@ -31,14 +31,6 @@ class DomainBatchSampler(Sampler):
         self.num_target_batches = target_size // self.domain_batch_size
 
     def __iter__(self) -> Iterator[list[int]]:
-        worker_info = get_worker_info()
-        if worker_info is None:
-            worker_id = 0
-            num_workers = 1
-        else:
-            worker_id = worker_info.id
-            num_workers = worker_info.num_workers
-
         # Shuffle indices if required
         if self.shuffle:
             source_perm = torch.randperm(self.source_size)
@@ -58,26 +50,11 @@ class DomainBatchSampler(Sampler):
         target_batches = target_idx.view(self.num_target_batches, self.domain_batch_size)
 
         # Build a list of (source_batch, target_batch) pairs
-        all_pairs = []
         for i in range(self.num_source_batches):
             src_batch = source_batches[i].tolist()
             tgt_batch = target_batches[i % self.num_target_batches].tolist()
-            all_pairs.append(src_batch + tgt_batch)
 
-        # Distribute batches among workers in a round-robin fashion
-        worker_batches = all_pairs[worker_id::num_workers]
-
-        yield from worker_batches
+            yield src_batch + tgt_batch
 
     def __len__(self) -> int:
-        total_batches = self.num_source_batches
-        worker_info = get_worker_info()
-        if worker_info is None:
-            num_workers = 1
-            worker_id = 0
-        else:
-            num_workers = worker_info.num_workers
-            worker_id = worker_info.id
-
-        # Number of batches assigned to this worker
-        return (total_batches + num_workers - 1 - worker_id) // num_workers
+        return self.num_source_batches
