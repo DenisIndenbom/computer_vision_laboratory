@@ -16,7 +16,7 @@ from utils.transforms import base_transforms, train_source_transforms, train_tar
 from utils.criterion import Coral
 from utils.metrics import bundle, metrics_with_mask, accuracy, coral
 from utils.trainer import train
-from utils.typing import TrainHookF
+from utils.typing import TrainHookF, MetricF
 
 from methods import TrainArgs, register
 
@@ -82,6 +82,15 @@ def build_hook(
     return hook
 
 
+def coral_fl(model) -> MetricF:
+    def metric(_: torch.Tensor, target: torch.Tensor) -> dict[str, int | float]:
+        feat_fl = model._features
+
+        return coral(feat_fl, target)
+
+    return metric
+
+
 @register('resnet50_coral')
 def resnet50_coral(args: TrainArgs):
     if not torch.cuda.is_available() and args['device'].startswith('cuda'):
@@ -132,7 +141,7 @@ def resnet50_coral(args: TrainArgs):
     # Setup optimizer, loss and metrics
     optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'])
     loss = Criterion(model, lambda_coral=coral_lambda_start)
-    metrics = bundle([metrics_with_mask(accuracy), coral])
+    metrics = bundle([metrics_with_mask(accuracy), coral_fl(model)])
 
     # Setup hook for updating lambda
     hook = None
