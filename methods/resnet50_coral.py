@@ -64,9 +64,7 @@ class Criterion(nn.Module):
             coral_2 = self.coral(feat_l3[mask], feat_l3[~mask])
             coral_3 = self.coral(feat_fl[mask], feat_fl[~mask])
 
-            coral_s = torch.stack([coral_1, coral_2, coral_3])
-            weights = torch.softmax(coral_s.detach(), dim=0)
-            coral = (weights * coral_s).sum()
+            coral = (coral_1 + coral_2 + coral_3) / 3.0
 
         return cls_loss + self.lambda_coral * coral
 
@@ -93,8 +91,8 @@ def resnet50_coral(args: TrainArgs):
         raise Exception('cuda is not available')
 
     # Load env vars
-    coral_lambda_start = float(os.getenv('CORAL_LAMBDA_START', 0.5))
-    coral_lambda_end = float(os.getenv('CORAL_LAMBDA_END', 0.5))
+    coral_lambda_start = float(os.getenv('CORAL_LAMBDA_START', 0.1))
+    coral_lambda_end = float(os.getenv('CORAL_LAMBDA_END', 0.1))
     coral_start_epoch = int(os.getenv('CORAL_START_EPOCH', 0))
     coral_ramp_epochs = int(os.getenv('CORAL_RAMP_EPOCHS', 0))
 
