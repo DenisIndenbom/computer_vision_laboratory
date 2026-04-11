@@ -77,73 +77,57 @@ def main():
 
     # Basic arguments
     parser.add_argument(
-        '--trainer', '-t',
+        '--trainer',
+        '-t',
         required=True,
-        help='Name of the training method (must be registered in METHOD_REGISTRY).'
+        help='Name of the training method (must be registered in METHOD_REGISTRY).',
     )
     parser.add_argument(
-        '--name', '-n',
-        required=True,
-        help='Run name – used for logs and checkpoint subdirectory.'
+        '--name', '-n', required=True, help='Run name – used for logs and checkpoint subdirectory.'
     )
     parser.add_argument(
-        '--data', '-d',
-        type=Path, default=Path('./data'),
-        help='Path to the dataset directory.'
+        '--data', '-d', type=Path, default=Path('./data'), help='Path to the dataset directory.'
     )
     parser.add_argument(
-        '--logs', '-l',
-        type=Path, default=Path('./logs'),
-        help='Path to the tensorboard logs directory.'
+        '--logs',
+        '-l',
+        type=Path,
+        default=Path('./logs'),
+        help='Path to the tensorboard logs directory.',
     )
 
     # Training hyperparameters
     train_group = parser.add_argument_group('Training hyperparameters')
+    train_group.add_argument('--epochs', type=int, default=50, help='Number of training epochs.')
     train_group.add_argument(
-        '--epochs', type=int, default=50,
-        help='Number of training epochs.'
+        '--start_epoch', type=int, default=0, help='Epoch to resume training from (usually 0).'
     )
+    train_group.add_argument('--batch_size', type=int, default=128, help='Samples per batch.')
     train_group.add_argument(
-        '--start_epoch', type=int, default=0,
-        help='Epoch to resume training from (usually 0).'
+        '--learning_rate', type=float, default=1e-4, help='Initial learning rate.'
     )
-    train_group.add_argument(
-        '--batch_size', type=int, default=128,
-        help='Samples per batch.'
-    )
-    train_group.add_argument(
-        '--learning_rate', type=float, default=1e-4,
-        help='Initial learning rate.'
-    )
-    train_group.add_argument(
-        '--workers', type=int, default=4,
-        help='Number of dataloader workers.'
-    )
-    train_group.add_argument(
-        '--seed', type=int, default=42,
-        help='Random seed.'
-    )
+    train_group.add_argument('--workers', type=int, default=4, help='Number of dataloader workers.')
+    train_group.add_argument('--seed', type=int, default=42, help='Random seed.')
 
     # Checkpointing
     ckpt_group = parser.add_argument_group('Checkpointing')
     ckpt_group.add_argument(
-        '--checkpoint_path', type=Path, default=Path('./checkpoints'),
-        help='Directory where checkpoints are saved.'
+        '--checkpoint_path',
+        type=Path,
+        default=Path('./checkpoints'),
+        help='Directory where checkpoints are saved.',
     )
     ckpt_group.add_argument(
-        '--checkpoint_interval', type=int, default=5,
-        help='Save checkpoint every N epochs.'
+        '--checkpoint_interval', type=int, default=5, help='Save checkpoint every N epochs.'
     )
 
     # Hardware & verbosity
     misc_group = parser.add_argument_group('Miscellaneous')
     misc_group.add_argument(
-        '--device', type=str, default='cuda:0',
-        help='Device to use (e.g. `cuda: 0`, `cpu`).'
+        '--device', type=str, default='cuda:0', help='Device to use (e.g. `cuda: 0`, `cpu`).'
     )
     misc_group.add_argument(
-        '--verbose', action='store_true',
-        help='Print detailed progress and metrics.'
+        '--verbose', action='store_true', help='Print detailed progress and metrics.'
     )
 
     args = parser.parse_args()
@@ -155,7 +139,8 @@ def main():
 
     if args.trainer not in METHOD_REGISTRY:
         print(
-            f'Error: Trainer `{args.trainer}` not found. Available: {list(METHOD_REGISTRY.keys())}')
+            f'Error: Trainer `{args.trainer}` not found. Available: {list(METHOD_REGISTRY.keys())}'
+        )
         sys.exit(1)
 
     train_args: TrainArgs = {

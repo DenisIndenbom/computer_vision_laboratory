@@ -30,18 +30,14 @@ class BaseImageFolderDataset(Dataset):
             self._download_and_extract()
 
         if not os.path.isdir(self.dataset_dir):
-            raise RuntimeError(
-                'Dataset not found. Set download=True to download it.'
-            )
+            raise RuntimeError('Dataset not found. Set download=True to download it.')
 
         self.classes = self._find_classes()
         self.class_to_idx = {cls: i for i, cls in enumerate(self.classes)}
         self.samples = self._make_dataset()
 
     def _find_classes(self) -> list[str]:
-        return sorted(
-            d.name for d in os.scandir(self.dataset_dir) if d.is_dir()
-        )
+        return sorted(d.name for d in os.scandir(self.dataset_dir) if d.is_dir())
 
     def _make_dataset(self) -> list[tuple[str, int]]:
         samples = []
@@ -50,9 +46,7 @@ class BaseImageFolderDataset(Dataset):
             cls_dir = os.path.join(self.dataset_dir, cls)
             for fname in os.listdir(cls_dir):
                 if fname.lower().endswith(('.png', '.jpg', '.jpeg')):
-                    samples.append(
-                        (os.path.join(cls_dir, fname), self.class_to_idx[cls])
-                    )
+                    samples.append((os.path.join(cls_dir, fname), self.class_to_idx[cls]))
 
         return samples
 
@@ -93,9 +87,7 @@ class BaseImageFolderDataset(Dataset):
             with tarfile.open(archive_path, 'r:*') as tf:
                 tf.extractall(self.root)
         else:
-            raise RuntimeError(
-                f'Unsupported archive format: {archive_path}'
-            )
+            raise RuntimeError(f'Unsupported archive format: {archive_path}')
 
     def _download_and_extract(self):
         if not self.URL:

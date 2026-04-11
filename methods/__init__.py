@@ -35,6 +35,7 @@ def register(name: str) -> Callable[[MethodType], MethodType]:
     Returns:
         Method entrypoint.
     """
+
     def decorator(fn: MethodType) -> MethodType:
         METHOD_REGISTRY[name] = fn
         return fn

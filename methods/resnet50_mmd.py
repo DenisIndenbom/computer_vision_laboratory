@@ -71,13 +71,10 @@ class Criterion(nn.Module):
         return cls_loss + self.lambda_mmd * mmd
 
 
-def build_hook(start_lambda: float, end_lambda: float, start_epoch: int, end_epoch: int) -> TrainHookF:
-    def hook(
-        epoch: int,
-        model: nn.Module,
-        optim: optim.Optimizer,
-        criterion: nn.Module
-    ) -> None:
+def build_hook(
+    start_lambda: float, end_lambda: float, start_epoch: int, end_epoch: int
+) -> TrainHookF:
+    def hook(epoch: int, model: nn.Module, optim: optim.Optimizer, criterion: nn.Module) -> None:
         t = min(max((epoch - start_epoch) / (end_epoch - start_epoch), 0.0), 1.0)
         new_lambda = start_lambda + t * (end_lambda - start_lambda)
 
@@ -99,15 +96,9 @@ def resnet50_mmd(args: TrainArgs):
     mmd_ramp_epochs = int(os.getenv('MMD_RAMP_EPOCHS', 0))
 
     # Load datasets
-    source_dataset = VisDA2017Source(
-        args['data'], transform=train_source_transforms, download=True
-    )
-    target_dataset = VisDA2017Target(
-        args['data'], transform=train_target_transforms, download=True
-    )
-    val_dataset = VisDA2017Validation(
-        args['data'], transform=base_transforms, download=True
-    )
+    source_dataset = VisDA2017Source(args['data'], transform=train_source_transforms, download=True)
+    target_dataset = VisDA2017Target(args['data'], transform=train_target_transforms, download=True)
+    val_dataset = VisDA2017Validation(args['data'], transform=base_transforms, download=True)
 
     train_dataset = DomainDataset(source_dataset, target_dataset)
 
@@ -134,12 +125,8 @@ def resnet50_mmd(args: TrainArgs):
 
     # Setup model
     model = resnet50(num_classes=12)
-    model.layer1.register_forward_hook(
-        lambda m, i, o: setattr(model, '_feat_l1', o.mean([2, 3]))
-    )
-    model.layer3.register_forward_hook(
-        lambda m, i, o: setattr(model, '_feat_l3', o.mean([2, 3]))
-    )
+    model.layer1.register_forward_hook(lambda m, i, o: setattr(model, '_feat_l1', o.mean([2, 3])))
+    model.layer3.register_forward_hook(lambda m, i, o: setattr(model, '_feat_l3', o.mean([2, 3])))
     model.avgpool.register_forward_hook(
         lambda m, i, o: setattr(model, '_features', torch.flatten(o, 1))
     )
@@ -153,10 +140,7 @@ def resnet50_mmd(args: TrainArgs):
     hook = None
     if mmd_ramp_epochs > 0:
         hook = build_hook(
-            mmd_lambda_start,
-            mmd_lambda_end,
-            mmd_start_epoch,
-            mmd_start_epoch + mmd_ramp_epochs
+            mmd_lambda_start, mmd_lambda_end, mmd_start_epoch, mmd_start_epoch + mmd_ramp_epochs
         )
 
     # Prepare arguments
@@ -180,5 +164,5 @@ def resnet50_mmd(args: TrainArgs):
         seed=args['seed'],
         verbose=args['verbose'],
         summary_writer=summary_writer,
-        post_epoch_hook=hook
+        post_epoch_hook=hook,
     )

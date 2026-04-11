@@ -34,12 +34,8 @@ def vitb16_pretrain(args: TrainArgs):
         raise Exception('cuda is not available')
 
     # Load datasets
-    train_dataset = VisDA2017Train(
-        args['data'], transform=train_source_transforms, download=True
-    )
-    val_dataset = VisDA2017Validation(
-        args['data'], transform=base_transforms, download=True
-    )
+    train_dataset = VisDA2017Train(args['data'], transform=train_source_transforms, download=True)
+    val_dataset = VisDA2017Validation(args['data'], transform=base_transforms, download=True)
 
     # Setup dataloaders
     train_dataloader = DataLoader(
@@ -82,5 +78,5 @@ def vitb16_pretrain(args: TrainArgs):
         device=device,
         seed=args['seed'],
         verbose=args['verbose'],
-        summary_writer=summary_writer
+        summary_writer=summary_writer,
     )

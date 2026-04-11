@@ -17,7 +17,9 @@ from .typing import MetricF, TrainHookF
 from .history import History
 
 
-def _add_scalars(writer: SummaryWriter | None, tag: str, scalars: dict[str, int | float], step: int):
+def _add_scalars(
+    writer: SummaryWriter | None, tag: str, scalars: dict[str, int | float], step: int
+):
     """
     Add scalars in tensorboard SummaryWriter.
 
@@ -68,9 +70,9 @@ def _save_random_state(filepath: str):
         filepath: Destination file path (e.g., "random_state.pt").
     """
     state = {
-        'torch': torch.random.get_rng_state(),          # CPU state
-        'random': random.getstate(),                    # Python's random state
-        'numpy': _get_np_state()                        # Numpy's random state
+        'torch': torch.random.get_rng_state(),  # CPU state
+        'random': random.getstate(),  # Python's random state
+        'numpy': _get_np_state(),  # Numpy's random state
     }
 
     if torch.cuda.is_available():
@@ -101,9 +103,10 @@ def _load_random_state(filepath: str):
 
 
 class tqdmd(tqdm):
-    """ 
+    """
     tqdm with docker support.
     """
+
     in_docker = environ.get('RUNNING_IN_DOCKER', False)
 
     def update(self, n=1):
@@ -122,21 +125,22 @@ class tqdmd(tqdm):
 
 
 def train(
-        model: nn.Module,
-        train_loader: DataLoader,
-        val_loader: DataLoader,
-        optimizer: Optimizer,
-        criterion: nn.Module,
-        metrics: MetricF,
-        epochs: int,
-        start_epoch: int = 0,
-        checkpoint_interval: int = 5,
-        checkpoint_path: str = '.',
-        device: torch.device = torch.device('cpu'),
-        seed: int | None = None,
-        verbose: bool = True,
-        summary_writer: SummaryWriter | None = None,
-        post_epoch_hook: TrainHookF | None = None) -> dict[str, list[int | float | None]]:
+    model: nn.Module,
+    train_loader: DataLoader,
+    val_loader: DataLoader,
+    optimizer: Optimizer,
+    criterion: nn.Module,
+    metrics: MetricF,
+    epochs: int,
+    start_epoch: int = 0,
+    checkpoint_interval: int = 5,
+    checkpoint_path: str = '.',
+    device: torch.device = torch.device('cpu'),
+    seed: int | None = None,
+    verbose: bool = True,
+    summary_writer: SummaryWriter | None = None,
+    post_epoch_hook: TrainHookF | None = None,
+) -> dict[str, list[int | float | None]]:
     """
     Train the classification model for a given number of epochs, evaluating on the validation set after each epoch.
 
@@ -184,13 +188,13 @@ def train(
     if start_epoch > 0:
         print('Loading checkpoint...', end='')
         model.load_state_dict(
-            torch.load(path.join(checkpoint_path, f'{model_name}_checkpoint_{start_epoch}.model')))
+            torch.load(path.join(checkpoint_path, f'{model_name}_checkpoint_{start_epoch}.model'))
+        )
         optimizer.load_state_dict(
-            torch.load(path.join(checkpoint_path, f'{model_name}_checkpoint_{start_epoch}.optim')))
-        _load_random_state(
-            path.join(checkpoint_path, f'{model_name}_checkpoint_{start_epoch}.rng'))
-        history.load(path.join(checkpoint_path,
-                     f'{model_name}_checkpoint_{start_epoch}.metrics'))
+            torch.load(path.join(checkpoint_path, f'{model_name}_checkpoint_{start_epoch}.optim'))
+        )
+        _load_random_state(path.join(checkpoint_path, f'{model_name}_checkpoint_{start_epoch}.rng'))
+        history.load(path.join(checkpoint_path, f'{model_name}_checkpoint_{start_epoch}.metrics'))
         print('OK')
 
     for epoch in range(start_epoch + 1, epochs + 1):
@@ -198,10 +202,7 @@ def train(
         model.train()
 
         train_loop = tqdmd(
-            train_loader,
-            desc=f'Epoch {epoch}/{epochs} [Train]',
-            leave=False,
-            disable=not verbose
+            train_loader, desc=f'Epoch {epoch}/{epochs} [Train]', leave=False, disable=not verbose
         )
         for x_batch, y_batch in train_loop:
             # Zero gradient
@@ -237,10 +238,7 @@ def train(
         model.eval()
 
         val_loop = tqdmd(
-            val_loader,
-            desc=f'Epoch {epoch}/{epochs} [Val]',
-            leave=False,
-            disable=not verbose
+            val_loader, desc=f'Epoch {epoch}/{epochs} [Val]', leave=False, disable=not verbose
         )
         with torch.no_grad():
             for x_batch, y_batch in val_loop:
@@ -270,26 +268,26 @@ def train(
         # Print epoch summary if verbose
         if verbose:
             train_metric_str = ' | '.join(
-                [f'Train {name}: {value:.4f}'
-                 for name, value in avg_train_metrics.items()]
+                [f'Train {name}: {value:.4f}' for name, value in avg_train_metrics.items()]
             )
             val_metric_str = ' | '.join(
-                [f'Val {name}: {value:.4f}'
-                 for name, value in avg_val_metrics.items()]
+                [f'Val {name}: {value:.4f}' for name, value in avg_val_metrics.items()]
             )
             print(f'Epoch {epoch:3d} | {train_metric_str} | {val_metric_str}')
 
         # Save checkpoint if interval
         if epoch % checkpoint_interval == 0 or epoch == epochs:
             print('Saving checkpoint...', end='')
-            torch.save(model.state_dict(),
-                       path.join(checkpoint_path, f'{model_name}_checkpoint_{epoch}.model'))
-            torch.save(optimizer.state_dict(),
-                       path.join(checkpoint_path, f'{model_name}_checkpoint_{epoch}.optim'))
-            _save_random_state(
-                path.join(checkpoint_path, f'{model_name}_checkpoint_{epoch}.rng'))
-            history.dump(path.join(checkpoint_path,
-                         f'{model_name}_checkpoint_{epoch}.metrics'))
+            torch.save(
+                model.state_dict(),
+                path.join(checkpoint_path, f'{model_name}_checkpoint_{epoch}.model'),
+            )
+            torch.save(
+                optimizer.state_dict(),
+                path.join(checkpoint_path, f'{model_name}_checkpoint_{epoch}.optim'),
+            )
+            _save_random_state(path.join(checkpoint_path, f'{model_name}_checkpoint_{epoch}.rng'))
+            history.dump(path.join(checkpoint_path, f'{model_name}_checkpoint_{epoch}.metrics'))
             print('OK')
 
         if summary_writer:
@@ -300,10 +298,12 @@ def train(
     return history.to_dict()
 
 
-def test(model: nn.Module,
-         dataloader: DataLoader,
-         metrics: MetricF,
-         device: torch.device = torch.device('cpu')) -> dict[str, float]:
+def test(
+    model: nn.Module,
+    dataloader: DataLoader,
+    metrics: MetricF,
+    device: torch.device = torch.device('cpu'),
+) -> dict[str, float]:
     """
     Evaluate the classification model on a test set.
 
@@ -335,7 +335,4 @@ def test(model: nn.Module,
 
             test_loop.set_postfix(batch_metrics)
 
-    return {
-        name: total / len(dataloader)
-        for name, total in total_metrics.items()
-    }
+    return {name: total / len(dataloader) for name, total in total_metrics.items()}

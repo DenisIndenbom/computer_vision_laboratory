@@ -18,8 +18,7 @@ class History:
         if key not in self._history:
             self._history[key] = [None] * (self._current_epoch - 1)
         elif len(self._history[key]) >= self._current_epoch:
-            raise Exception(
-                f'Key {key} already has a value for epoch {self._current_epoch}')
+            raise Exception(f'Key {key} already has a value for epoch {self._current_epoch}')
 
         self._history[key].append(value)
 

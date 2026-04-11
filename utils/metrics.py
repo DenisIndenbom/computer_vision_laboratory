@@ -17,11 +17,13 @@ def bundle(metrics: list[MetricF]) -> MetricF:
         A function that takes output and target tensors and returns a merged
         dictionary of all metrics.
     """
+
     def combined(output: Tensor, target: Tensor) -> dict[str, int | float]:
         result = {}
         for metric in metrics:
             result.update(metric(output, target))
         return result
+
     return combined
 
 
@@ -38,14 +40,13 @@ def metrics_with_mask(orig_metrics_fn: MetricF) -> MetricF:
     Returns:
         Wrapped metrics function with masking support.
     """
+
     def wrapped(pred, y):
-        mask = (y != -1)
+        mask = y != -1
 
         if mask.sum() == 0:
             zeroed = {
-                k: 0.0 for k in orig_metrics_fn(
-                    zeros(1, pred.size(1)), zeros(1, dtype=long)
-                ).keys()
+                k: 0.0 for k in orig_metrics_fn(zeros(1, pred.size(1)), zeros(1, dtype=long)).keys()
             }
             return zeroed
         return orig_metrics_fn(pred[mask], y[mask])
