@@ -23,7 +23,7 @@ class VisDA2017Train(BaseImageFolderDataset):
 
 
 class VisDA2017Validation(BaseImageFolderDataset):
-    URL = ' http://csr.bu.edu/ftp/visda17/clf/validation.tar'
+    URL = 'http://csr.bu.edu/ftp/visda17/clf/validation.tar'
     ARCHIVE_NAME = 'validation.tar'
     EXTRACTED_FOLDER = 'validation'
 
