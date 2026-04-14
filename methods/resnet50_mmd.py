@@ -6,7 +6,7 @@ from torch import optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from torchvision.models import resnet50
+from torchvision.models import resnet50, ResNet50_Weights
 
 from typing import cast
 
@@ -90,6 +90,7 @@ def resnet50_mmd(args: TrainArgs):
         raise Exception('cuda is not available')
 
     # Load env vars
+    imagenet_weights = bool(os.getenv('IMAGENET_WEIGHTS', 'false') == 'true')
     mmd_lambda_start = float(os.getenv('MMD_LAMBDA_START', 0.5))
     mmd_lambda_end = float(os.getenv('MMD_LAMBDA_END', 0.5))
     mmd_start_epoch = int(os.getenv('MMD_START_EPOCH', 0))
@@ -124,7 +125,12 @@ def resnet50_mmd(args: TrainArgs):
     )
 
     # Setup model
-    model = resnet50(num_classes=12)
+    if not imagenet_weights:
+        model = resnet50(num_classes=12)
+    else:
+        model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2)
+        model.fc = nn.Linear(512 * 4, 12)
+
     model.layer1.register_forward_hook(lambda m, i, o: setattr(model, '_feat_l1', o.mean([2, 3])))
     model.layer3.register_forward_hook(lambda m, i, o: setattr(model, '_feat_l3', o.mean([2, 3])))
     model.avgpool.register_forward_hook(
