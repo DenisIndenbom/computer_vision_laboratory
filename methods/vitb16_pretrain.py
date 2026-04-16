@@ -33,6 +33,11 @@ def vitb16_pretrain(args: TrainArgs):
     if not torch.cuda.is_available() and args['device'].startswith('cuda'):
         raise Exception('cuda is not available')
 
+    # Prepare arguments
+    summary_writer = SummaryWriter(os.path.join(args['logs'], args['name']))
+    checkpoint_path = os.path.join(args['checkpoint_path'], args['name'])
+    device = torch.device(args['device'])
+
     # Load datasets
     train_dataset = VisDA2017Train(args['data'], transform=train_source_transforms, download=True)
     val_dataset = VisDA2017Validation(args['data'], transform=base_transforms, download=True)
@@ -57,11 +62,6 @@ def vitb16_pretrain(args: TrainArgs):
     model = vit_b_16(num_classes=12)
     optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'])
     loss = nn.CrossEntropyLoss()
-
-    # Prepare arguments
-    summary_writer = SummaryWriter(os.path.join(args['logs'], args['name']))
-    checkpoint_path = os.path.join(args['checkpoint_path'], args['name'])
-    device = torch.device(args['device'])
 
     # Launch training
     train(

@@ -14,6 +14,7 @@ from utils.dataset import BaseImageFolderDataset, DomainDataset
 from utils.sampler import DomainBatchSampler
 from utils.transforms import base_transforms, train_source_transforms, train_target_transforms
 from utils.criterion import MMD
+from utils.gradient import freeze_params
 from utils.metrics import bundle, metrics_with_mask, accuracy, mmd
 from utils.trainer import train
 from utils.typing import TrainHookF
@@ -64,10 +65,6 @@ class Criterion(nn.Module):
             mmd_2 = self.mmd(feat_l3[mask], feat_l3[~mask])
             mmd_3 = self.mmd(feat_fl[mask], feat_fl[~mask])
 
-            # mmd_s = torch.stack([mmd_1, mmd_2, mmd_3])
-            # weights = torch.softmax(mmd_s.detach(), dim=0)
-            # mmd = (weights * mmd_s).sum()
-
             mmd = (mmd_1 + mmd_2 + mmd_3) / 3.0
 
         return cls_loss + self.lambda_mmd * mmd
@@ -93,10 +90,16 @@ def resnet50_mmd(args: TrainArgs):
 
     # Load env vars
     imagenet_weights = bool(os.getenv('IMAGENET_WEIGHTS', 'false') == 'true')
+    freeze_ratio = float(os.getenv('FREEZE_RATIO', 0.0))
     mmd_lambda_start = float(os.getenv('MMD_LAMBDA_START', 0.5))
     mmd_lambda_end = float(os.getenv('MMD_LAMBDA_END', 0.5))
     mmd_start_epoch = int(os.getenv('MMD_START_EPOCH', 0))
     mmd_ramp_epochs = int(os.getenv('MMD_RAMP_EPOCHS', 0))
+
+    # Prepare arguments
+    summary_writer = SummaryWriter(os.path.join(args['logs'], args['name']))
+    checkpoint_path = os.path.join(args['checkpoint_path'], args['name'])
+    device = torch.device(args['device'])
 
     # Load datasets
     source_dataset = VisDA2017Source(args['data'], transform=train_source_transforms, download=True)
@@ -138,6 +141,12 @@ def resnet50_mmd(args: TrainArgs):
     model.avgpool.register_forward_hook(
         lambda m, i, o: setattr(model, '_features', torch.flatten(o, 1))
     )
+    model.to(device)
+
+    if freeze_ratio > 0.0:
+        freeze_params(
+            model.named_parameters(), freeze_ratio, args['seed'], ['fc.weight', 'fc.bias']
+        )
 
     # Setup optimizer, loss and metrics
     optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'])
@@ -150,11 +159,6 @@ def resnet50_mmd(args: TrainArgs):
         hook = build_hook(
             mmd_lambda_start, mmd_lambda_end, mmd_start_epoch, mmd_start_epoch + mmd_ramp_epochs
         )
-
-    # Prepare arguments
-    summary_writer = SummaryWriter(os.path.join(args['logs'], args['name']))
-    checkpoint_path = os.path.join(args['checkpoint_path'], args['name'])
-    device = torch.device(args['device'])
 
     # Launch training
     train(

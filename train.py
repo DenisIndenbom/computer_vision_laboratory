@@ -3,6 +3,7 @@ import argparse
 import sys
 
 from pathlib import Path
+from dotenv import load_dotenv
 
 
 def validate_args(args: argparse.Namespace):
@@ -16,6 +17,14 @@ def validate_args(args: argparse.Namespace):
 
     if not args.data.is_dir():
         print('Error: --data must be a directory.')
+        sys.exit(1)
+
+    if not args.env.exists():
+        print('Error: --env not found.')
+        sys.exit(1)
+
+    if args.env.is_dir():
+        print('Error: --env must be a file.')
         sys.exit(1)
 
     if not args.logs.exists():
@@ -64,10 +73,6 @@ def validate_args(args: argparse.Namespace):
         print('Error: --checkpoint_interval must be a positive integer.')
         sys.exit(1)
 
-    exp_dir = ckpt_path / args.name
-    if not exp_dir.exists():
-        exp_dir.mkdir(parents=True)
-
 
 def main():
     parser = argparse.ArgumentParser(
@@ -87,6 +92,9 @@ def main():
     )
     parser.add_argument(
         '--data', '-d', type=Path, default=Path('./data'), help='Path to the dataset directory.'
+    )
+    parser.add_argument(
+        '--env', '-e', type=Path, default=Path('.env'), help='Path to the environment file.'
     )
     parser.add_argument(
         '--logs',
@@ -130,9 +138,15 @@ def main():
         '--verbose', action='store_true', help='Print detailed progress and metrics.'
     )
 
+    # Parse and validate args
     args = parser.parse_args()
-
     validate_args(args)
+
+    # Preparation routine
+    load_dotenv(dotenv_path=args.env)
+    exp_dir = args.checkpoint_path / args.name
+    if not exp_dir.exists():
+        exp_dir.mkdir(parents=True)
 
     # Import module here, since torch is heavy
     from methods import METHOD_REGISTRY, TrainArgs

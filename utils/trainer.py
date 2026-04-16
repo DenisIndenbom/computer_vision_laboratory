@@ -37,6 +37,12 @@ def _add_scalars(
 
 
 def _get_np_state():
+    """
+    Get numpy random state and convert into python types.
+
+    Returns:
+        Numpy random state.
+    """
     state = list(np.random.get_state())
     state[1] = state[1].tolist()  # type: ignore
     return tuple(state)

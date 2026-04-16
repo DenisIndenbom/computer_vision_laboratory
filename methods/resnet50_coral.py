@@ -14,6 +14,7 @@ from utils.dataset import BaseImageFolderDataset, DomainDataset
 from utils.sampler import DomainBatchSampler
 from utils.transforms import base_transforms, train_source_transforms, train_target_transforms
 from utils.criterion import Coral
+from utils.gradient import freeze_params
 from utils.metrics import bundle, metrics_with_mask, accuracy, coral
 from utils.trainer import train
 from utils.typing import TrainHookF, MetricF
@@ -98,10 +99,16 @@ def resnet50_coral(args: TrainArgs):
 
     # Load env vars
     imagenet_weights = bool(os.getenv('IMAGENET_WEIGHTS', 'false') == 'true')
+    freeze_ratio = float(os.getenv('FREEZE_RATIO', 0.0))
     coral_lambda_start = float(os.getenv('CORAL_LAMBDA_START', 0.1))
     coral_lambda_end = float(os.getenv('CORAL_LAMBDA_END', 0.1))
     coral_start_epoch = int(os.getenv('CORAL_START_EPOCH', 0))
     coral_ramp_epochs = int(os.getenv('CORAL_RAMP_EPOCHS', 0))
+
+    # Prepare arguments
+    summary_writer = SummaryWriter(os.path.join(args['logs'], args['name']))
+    checkpoint_path = os.path.join(args['checkpoint_path'], args['name'])
+    device = torch.device(args['device'])
 
     # Load datasets
     source_dataset = VisDA2017Source(args['data'], transform=train_source_transforms, download=True)
@@ -143,6 +150,12 @@ def resnet50_coral(args: TrainArgs):
     model.avgpool.register_forward_hook(
         lambda m, i, o: setattr(model, '_features', torch.flatten(o, 1))
     )
+    model.to(device)
+
+    if freeze_ratio > 0.0:
+        freeze_params(
+            model.named_parameters(), freeze_ratio, args['seed'], ['fc.weight', 'fc.bias']
+        )
 
     # Setup optimizer, loss and metrics
     optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'])
@@ -158,11 +171,6 @@ def resnet50_coral(args: TrainArgs):
             coral_start_epoch,
             coral_start_epoch + coral_ramp_epochs,
         )
-
-    # Prepare arguments
-    summary_writer = SummaryWriter(os.path.join(args['logs'], args['name']))
-    checkpoint_path = os.path.join(args['checkpoint_path'], args['name'])
-    device = torch.device(args['device'])
 
     # Launch training
     train(
