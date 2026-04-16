@@ -100,6 +100,7 @@ def resnet50_mmd(args: TrainArgs):
     summary_writer = SummaryWriter(os.path.join(args['logs'], args['name']))
     checkpoint_path = os.path.join(args['checkpoint_path'], args['name'])
     device = torch.device(args['device'])
+    seed = args['seed']
 
     # Load datasets
     source_dataset = VisDA2017Source(args['data'], transform=train_source_transforms, download=True)
@@ -145,7 +146,7 @@ def resnet50_mmd(args: TrainArgs):
 
     if freeze_ratio > 0.0:
         freeze_params(
-            model.named_parameters(), freeze_ratio, args['seed'], ['fc.weight', 'fc.bias']
+            model.named_parameters(), freeze_ratio, device, seed, ['fc.weight', 'fc.bias']
         )
 
     # Setup optimizer, loss and metrics
@@ -173,7 +174,7 @@ def resnet50_mmd(args: TrainArgs):
         checkpoint_interval=args['checkpoint_interval'],
         checkpoint_path=checkpoint_path,
         device=device,
-        seed=args['seed'],
+        seed=seed,
         verbose=args['verbose'],
         summary_writer=summary_writer,
         post_epoch_hook=hook,

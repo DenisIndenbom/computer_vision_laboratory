@@ -1,6 +1,6 @@
 from typing import Iterator
 
-from torch import Generator, rand_like
+from torch import Generator, device, rand_like
 from torch.autograd import Function
 from torch.nn import Parameter
 from torch.utils.hooks import RemovableHandle
@@ -39,6 +39,7 @@ def grad_reverse(x, lambda_=1.0):
 def freeze_params(
     params: Iterator[tuple[str, Parameter]],
     fraction: float = 0.2,
+    device: device = device('cpu'),
     seed: int = 42,
     exclude: list[str] | None = None,
 ) -> dict[str, RemovableHandle]:
@@ -55,7 +56,7 @@ def freeze_params(
         Dictionary of removable handles for each parameter.
     """
 
-    g = Generator().manual_seed(seed)
+    g = Generator(device).manual_seed(seed)
     hooks: dict[str, RemovableHandle] = {}
 
     for name, param in params:
