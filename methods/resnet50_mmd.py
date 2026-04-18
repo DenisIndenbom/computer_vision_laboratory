@@ -1,43 +1,23 @@
 import os
-import torch
-
-from torch import nn
-from torch import optim
-from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
-
-from torchvision.models import resnet50, ResNet50_Weights
-
 from typing import cast
 
-from utils.dataset import BaseImageFolderDataset, DomainDataset
-from utils.sampler import DomainBatchSampler
-from utils.transforms import base_transforms, train_source_transforms, train_target_transforms
-from utils.criterion import MMD
-from utils.gradient import freeze_params
-from utils.metrics import bundle, metrics_with_mask, accuracy, mmd
-from utils.trainer import train
-from utils.typing import TrainHookF
+import torch
+from torch import nn, optim
+from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
+from torchvision.models import ResNet50_Weights, resnet50
 
 from methods import TrainArgs, register
+from utils.criterion import MMD
+from utils.dataset import DomainDataset
+from utils.gradient import freeze_params
+from utils.metrics import accuracy, bundle, metrics_with_mask, mmd
+from utils.sampler import DomainBatchSampler
+from utils.trainer import train
+from utils.transforms import base_transforms, train_source_transforms, train_target_transforms
+from utils.typing import TrainHookF
 
-
-class VisDA2017Source(BaseImageFolderDataset):
-    URL = 'http://csr.bu.edu/ftp/visda17/clf/train.tar'
-    ARCHIVE_NAME = 'train.tar'
-    EXTRACTED_FOLDER = 'train'
-
-
-class VisDA2017Target(BaseImageFolderDataset):
-    URL = 'http://csr.bu.edu/ftp/visda17/clf/test.tar'
-    ARCHIVE_NAME = 'test.tar'
-    EXTRACTED_FOLDER = 'test'
-
-
-class VisDA2017Validation(BaseImageFolderDataset):
-    URL = 'http://csr.bu.edu/ftp/visda17/clf/validation.tar'
-    ARCHIVE_NAME = 'validation.tar'
-    EXTRACTED_FOLDER = 'validation'
+from .common import VisDA2017Source, VisDA2017Target, VisDA2017Validation
 
 
 class Criterion(nn.Module):
@@ -54,18 +34,16 @@ class Criterion(nn.Module):
 
         cls_loss = self.ce(pred[mask], y[mask])
 
-        mmd = torch.tensor(0, device=y.device)
-
         if (~mask).sum() > 0:
-            feat_l1 = self.model._feat_l1
-            feat_l3 = self.model._feat_l3
-            feat_fl = self.model._features
+            feat_l3 = self.model.feat_l3_
+            feat_fl = self.model.feat_fl_
 
-            mmd_1 = self.mmd(feat_l1[mask], feat_l1[~mask])
-            mmd_2 = self.mmd(feat_l3[mask], feat_l3[~mask])
-            mmd_3 = self.mmd(feat_fl[mask], feat_fl[~mask])
+            mmd_1 = self.mmd(feat_l3[mask], feat_l3[~mask])
+            mmd_2 = self.mmd(feat_fl[mask], feat_fl[~mask])
 
-            mmd = (mmd_1 + mmd_2 + mmd_3) / 3.0
+            mmd = (mmd_1 + mmd_2) / 2.0
+        else:
+            mmd = torch.tensor(0, device=y.device)
 
         return cls_loss + self.lambda_mmd * mmd
 
@@ -90,7 +68,6 @@ def resnet50_mmd(args: TrainArgs):
 
     # Load env vars
     imagenet_weights = bool(os.getenv('IMAGENET_WEIGHTS', 'false') == 'true')
-    freeze_ratio = float(os.getenv('FREEZE_RATIO', 0.0))
     mmd_lambda_start = float(os.getenv('MMD_LAMBDA_START', 0.5))
     mmd_lambda_end = float(os.getenv('MMD_LAMBDA_END', 0.5))
     mmd_start_epoch = int(os.getenv('MMD_START_EPOCH', 0))
@@ -137,20 +114,25 @@ def resnet50_mmd(args: TrainArgs):
         model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2)
         model.fc = nn.Linear(512 * 4, 12)
 
-    model.layer1.register_forward_hook(lambda m, i, o: setattr(model, '_feat_l1', o.mean([2, 3])))
-    model.layer3.register_forward_hook(lambda m, i, o: setattr(model, '_feat_l3', o.mean([2, 3])))
+        # Freeze params to prevent overfitting
+        to_exclude = [
+            name
+            for name, _ in model.named_parameters()
+            if name.startswith(('layer3', 'layer4', 'fc'))
+        ]
+        freeze_params(model.named_parameters(), exclude=to_exclude)
+
+    model.layer3.register_forward_hook(lambda m, i, o: setattr(model, 'feat_l3_', o.mean([2, 3])))
     model.avgpool.register_forward_hook(
-        lambda m, i, o: setattr(model, '_features', torch.flatten(o, 1))
+        lambda m, i, o: setattr(model, 'feat_fl_', torch.flatten(o, 1))
     )
     model.to(device)
 
-    if freeze_ratio > 0.0:
-        freeze_params(
-            model.named_parameters(), freeze_ratio, device, seed, ['fc.weight', 'fc.bias']
-        )
-
     # Setup optimizer, loss and metrics
-    optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'])
+    optimizer = optim.AdamW(
+        filter(lambda p: p.requires_grad, model.parameters()),
+        lr=args['learning_rate'],
+    )
     loss = Criterion(model, lambda_mmd=mmd_lambda_start)
     metrics = bundle([metrics_with_mask(accuracy), mmd])
 
@@ -158,7 +140,10 @@ def resnet50_mmd(args: TrainArgs):
     hook = None
     if mmd_ramp_epochs > 0:
         hook = build_hook(
-            mmd_lambda_start, mmd_lambda_end, mmd_start_epoch, mmd_start_epoch + mmd_ramp_epochs
+            mmd_lambda_start,
+            mmd_lambda_end,
+            mmd_start_epoch,
+            mmd_start_epoch + mmd_ramp_epochs,
         )
 
     # Launch training

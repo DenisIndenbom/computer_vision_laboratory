@@ -8,7 +8,7 @@ from torchvision.models import ResNet50_Weights
 
 from methods import TrainArgs, register
 from utils.dataset import DomainDataset
-from utils.gradient import freeze_params
+from utils.gradient import freeze_rand_params
 from utils.metrics import accuracy_at, bundle, metrics_with_mask, metrics_with_slice
 from utils.models import ResNetDANN
 from utils.sampler import DomainBatchSampler
@@ -92,7 +92,7 @@ def resnet50_dann(args: TrainArgs):
     model.to(device)
 
     if freeze_ratio > 0.0:
-        freeze_params(
+        freeze_rand_params(
             model.named_parameters(), freeze_ratio, device, seed, ['fc.weight', 'fc.bias']
         )
 

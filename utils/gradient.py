@@ -36,7 +36,22 @@ def grad_reverse(x, lambda_=1.0):
     return GradientReversalFunction.apply(x, lambda_)
 
 
-def freeze_params(
+def freeze_params(params: Iterator[tuple[str, Parameter]], exclude: list[str] | None = None):
+    """
+    Freeze all parameters that are not included in exclude list during whole training.
+
+    Args:
+        params: Model parameters to freeze.
+        exclude: List of parameters to exclude from freezing. Defaults to None.
+    """
+    for name, param in params:
+        if exclude is not None and name in exclude:
+            continue
+
+        param.requires_grad = False
+
+
+def freeze_rand_params(
     params: Iterator[tuple[str, Parameter]],
     fraction: float = 0.2,
     device: device = device('cpu'),
