@@ -45,4 +45,6 @@ def register(name: str) -> Callable[[MethodType], MethodType]:
 
 # load all method modules
 for _, module_name, _ in pkgutil.iter_modules(__path__):
+    if module_name == 'common':
+        continue
     importlib.import_module(f'{__name__}.{module_name}')

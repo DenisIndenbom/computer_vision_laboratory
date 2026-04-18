@@ -27,22 +27,23 @@ def bundle(metrics: list[MetricF]) -> MetricF:
     return combined
 
 
-def metrics_with_mask(orig_metrics_fn: MetricF) -> MetricF:
+def metrics_with_mask(orig_metrics_fn: MetricF, label: int = -1) -> MetricF:
     """
     Wraps a metrics function to ignore masked targets.
 
-    Filters out samples where `y == -1` before calling `orig_metrics_fn`.
+    Filters out samples where `y == label` before calling `orig_metrics_fn`.
     If all samples are masked, returns zeroed metrics with the same keys.
 
     Args:
         orig_metrics_fn: Callable that computes metrics from (pred, y).
+        label: Target value to treat as masked and ignore during metric computation. Defaults to -1.
 
     Returns:
         Wrapped metrics function with masking support.
     """
 
     def wrapped(pred, y):
-        mask = y != -1
+        mask = y != label
 
         if mask.sum() == 0:
             zeroed = {
@@ -54,7 +55,42 @@ def metrics_with_mask(orig_metrics_fn: MetricF) -> MetricF:
     return wrapped
 
 
-def accuracy(output: Tensor, target: Tensor, topk=(1, 5)) -> dict[str, int | float]:
+def metrics_with_slice(orig_metrics_fn: MetricF, index: int) -> MetricF:
+    """
+    Wraps a metrics function to compute only on a specific slice of predictions.
+
+    Args:
+        orig_metrics_fn: Callable that computes metrics from (pred, y).
+        index: Index to slice from the first dimension of predictions.
+
+    Returns:
+        Wrapped metrics function.
+    """
+
+    def wrapped(pred, y):
+        return orig_metrics_fn(pred[index], y)
+
+    return wrapped
+
+
+def accuracy_at(topk=(1, 5), prefix: str = '') -> MetricF:
+    """
+    Wraps accuracy with preset topk and prefix.
+
+    Args:
+        topk: Tuple of integers specifying which top-k accuracies to compute.. Defaults to (1, 5).
+        prefix: Optional string to prepend to the returned metric keys. Defaults to ''.
+    """
+
+    def wrapped(*args):
+        return accuracy(*args, topk=topk, prefix=prefix)
+
+    return wrapped
+
+
+def accuracy(
+    output: Tensor, target: Tensor, topk=(1, 5), prefix: str = ''
+) -> dict[str, int | float]:
     """
     Computes the top-k accuracy for the specified values of k.
 
@@ -63,6 +99,8 @@ def accuracy(output: Tensor, target: Tensor, topk=(1, 5)) -> dict[str, int | flo
         target: Ground truth labels with shape (batch_size,)
         topk:   Tuple of integers specifying which top-k accuracies to compute.
                 Default: (1, 5) computes top-1 and top-5 accuracy.
+        prefix: Optional string to prepend to the returned metric keys.
+                For example, prefix='val_' yields keys like 'val_acc1', 'val_acc5'.
 
     Returns:
         dict: Dict of top-k accuracy scores as percentages (0-100).
@@ -80,7 +118,7 @@ def accuracy(output: Tensor, target: Tensor, topk=(1, 5)) -> dict[str, int | flo
         res = {}
         for k in topk:
             correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
-            res[f'acc{k}'] = correct_k.mul_(100.0 / batch_size).item()
+            res[f'{prefix}acc{k}'] = correct_k.mul_(100.0 / batch_size).item()
 
     return res
 
