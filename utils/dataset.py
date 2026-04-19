@@ -1,11 +1,12 @@
 import os
-import zipfile
 import tarfile
-
-from torch.utils.data import Dataset
-from urllib import request
+import zipfile
 from typing import Callable
+from urllib import request
+
 from PIL import Image
+from torch import randperm
+from torch.utils.data import Dataset, Subset
 
 from .typing import DatasetLike
 
@@ -142,3 +143,24 @@ class DomainDataset(Dataset):
             x = x[0]
 
         return x, self.target_label
+
+
+def shuffle_and_subset(dataset: Dataset, fraction: float) -> Subset:
+    """
+    Shuffles the dataset indices using PyTorch and returns a random subset.
+
+    Args:
+        dataset: PyTorch Dataset object
+        fraction: Fraction of dataset to retain (0 < fraction <= 1)
+
+    Returns:
+        Subset of the dataset
+    """
+    assert 0 < fraction <= 1, '0 < fraction <= 1'
+
+    n = len(dataset)  # pyright: ignore[reportArgumentType]
+    perm = randperm(n)
+    subset_size = int(n * fraction)
+    selected_indices = perm[:subset_size].tolist()
+
+    return Subset(dataset, selected_indices)

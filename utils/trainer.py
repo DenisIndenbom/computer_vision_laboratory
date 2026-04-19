@@ -1,20 +1,16 @@
 import random
+from os import environ, path
+
 import numpy as np
-
-from os import path, environ
-
 import torch
 import torch.nn as nn
-
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-
 from tqdm import tqdm
 
-from .typing import MetricF, TrainHookF
-
 from .history import History
+from .typing import MetricF, TrainHookF
 
 
 def _add_scalars(

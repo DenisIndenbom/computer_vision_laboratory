@@ -1,7 +1,7 @@
+from typing import Iterator
+
 import torch
 from torch.utils.data import Sampler
-
-from typing import Iterator
 
 
 class DomainBatchSampler(Sampler):

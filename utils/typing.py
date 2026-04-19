@@ -1,4 +1,4 @@
-from typing import Protocol, Callable, Any
+from typing import Any, Callable, Protocol
 
 from torch import Tensor
 from torch.nn import Module

@@ -1,19 +1,16 @@
 import os
-import torch
 
-from torch import nn
-from torch import optim
+import torch
+from torch import nn, optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-
 from torchvision.models import resnet50
 
+from methods import TrainArgs, register
 from utils.dataset import BaseImageFolderDataset
-from utils.transforms import base_transforms, train_source_transforms
 from utils.metrics import accuracy
 from utils.trainer import train
-
-from methods import TrainArgs, register
+from utils.transforms import base_transforms, train_source_transforms
 
 
 class VisDA2017Train(BaseImageFolderDataset):

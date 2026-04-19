@@ -1,9 +1,7 @@
-from torch import Tensor, no_grad
-from torch import long, zeros
-
-from .typing import MetricF
+from torch import Tensor, long, no_grad, zeros
 
 from .criterion import MMD, Coral
+from .typing import MetricF
 
 
 def bundle(metrics: list[MetricF]) -> MetricF:

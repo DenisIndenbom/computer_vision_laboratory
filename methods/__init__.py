@@ -1,7 +1,6 @@
 import importlib
 import pkgutil
-
-from typing import Callable, Any, TypedDict
+from typing import Any, Callable, TypedDict
 
 
 class TrainArgs(TypedDict):
