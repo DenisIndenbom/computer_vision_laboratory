@@ -5,7 +5,7 @@ from typing import Callable
 from urllib import request
 
 from PIL import Image
-from torch import randperm
+from torch import Generator, randperm
 from torch.utils.data import Dataset, Subset
 
 from .typing import DatasetLike
@@ -145,22 +145,26 @@ class DomainDataset(Dataset):
         return x, self.target_label
 
 
-def shuffle_and_subset(dataset: Dataset, fraction: float) -> Subset:
+def split_dataset(dataset: Dataset, fraction: float, seed: int = 42) -> tuple[Subset, Subset]:
     """
-    Shuffles the dataset indices using PyTorch and returns a random subset.
+    Shuffles the dataset and split into two subsets.
 
     Args:
-        dataset: PyTorch Dataset object
-        fraction: Fraction of dataset to retain (0 < fraction <= 1)
+        dataset: PyTorch Dataset object.
+        val_fraction: Fraction of the smallest subset (0 < fraction <= 1).
+        seed: Random seed for shuffle. Default to 42.
 
     Returns:
-        Subset of the dataset
+        Two subsets of the dataset.
     """
     assert 0 < fraction <= 1, '0 < fraction <= 1'
 
     n = len(dataset)  # pyright: ignore[reportArgumentType]
-    perm = randperm(n)
-    subset_size = int(n * fraction)
-    selected_indices = perm[:subset_size].tolist()
+    g = Generator().manual_seed(seed)
+    perm = randperm(n, generator=g)
+    split_size = int(n * fraction)
 
-    return Subset(dataset, selected_indices)
+    l_indices = perm[split_size:].tolist()
+    r_indices = perm[:split_size].tolist()
+
+    return Subset(dataset, l_indices), Subset(dataset, r_indices)
