@@ -139,8 +139,11 @@ def resnet50_coral(args: TrainArgs):
 
     # Setup optimizer, loss and metrics
     optimizer = optim.AdamW(
-        filter(lambda p: p.requires_grad, model.parameters()),
-        lr=args['learning_rate'],
+        [
+            {'params': model.fc.parameters(), 'lr': args['learning_rate']},
+            {'params': model.layer4.parameters(), 'lr': args['learning_rate'] / 10},
+            {'params': model.layer3.parameters(), 'lr': args['learning_rate'] / 10},
+        ]
     )
     loss = Criterion(model, lambda_coral=coral_lambda_start)
     metrics = bundle([metrics_with_mask(accuracy), coral_fl(model)])
