@@ -1,7 +1,6 @@
 from torch import Tensor, long, no_grad, zeros
 
-from .criterion import MMD, Coral
-from .typing import MetricF
+from .typing import ConditionF, CriterionF, MetricF
 
 
 def bundle(metrics: list[MetricF]) -> MetricF:
@@ -25,7 +24,7 @@ def bundle(metrics: list[MetricF]) -> MetricF:
     return combined
 
 
-def metrics_with_mask(orig_metrics_fn: MetricF, label: int = -1) -> MetricF:
+def with_mask(orig_metrics_fn: MetricF, label: int = -1) -> MetricF:
     """
     Wraps a metrics function to ignore masked targets.
 
@@ -53,12 +52,12 @@ def metrics_with_mask(orig_metrics_fn: MetricF, label: int = -1) -> MetricF:
     return wrapped
 
 
-def metrics_with_slice(orig_metrics_fn: MetricF, index: int) -> MetricF:
+def with_slice(orig_metrics_fn: MetricF, index: int) -> MetricF:
     """
     Wraps a metrics function to compute only on a specific slice of predictions.
 
     Args:
-        orig_metrics_fn: Callable that computes metrics from (pred, y).
+        orig_metrics_fn: Callable that computes metrics from `(pred, y)`.
         index: Index to slice from the first dimension of predictions.
 
     Returns:
@@ -71,24 +70,83 @@ def metrics_with_slice(orig_metrics_fn: MetricF, index: int) -> MetricF:
     return wrapped
 
 
-def accuracy_at(topk=(1, 5), prefix: str = '') -> MetricF:
+def with_prefix(metric_fn: MetricF, prefix: str) -> MetricF:
     """
-    Wraps accuracy with preset topk and prefix.
+    Wraps a metrics function to prepend a prefix to all returned metric keys.
 
     Args:
-        topk: Tuple of integers specifying which top-k accuracies to compute.. Defaults to (1, 5).
-        prefix: Optional string to prepend to the returned metric keys. Defaults to ''.
+        metric_fn: Metric function that returns a dictionary of named metrics.
+        prefix: String to prepend to each key (e.g., "train_", "val/").
+
+    Returns:
+        Wrapped metrics function that returns a dictionary with prefixed keys.
     """
 
-    def wrapped(*args):
-        return accuracy(*args, topk=topk, prefix=prefix)
+    def wrapped(pred, target):
+        return {f'{prefix}{k}': v for k, v in metric_fn(pred, target).items()}
 
     return wrapped
 
 
-def accuracy(
-    output: Tensor, target: Tensor, topk=(1, 5), prefix: str = ''
-) -> dict[str, int | float]:
+def apply_if(metric_fn: MetricF, condition: ConditionF) -> MetricF:
+    """
+    Wraps a metrics function to be executed only when a condition is met.
+
+    Args:
+        metric_fn: Metric function to be conditionally applied.
+        condition: Callable that takes `(pred, target)` and returns a boolean.
+            If `True`, `metric_fn` is called; otherwise an empty dict is returned.
+
+    Returns:
+        Wrapped metrics function that respects the condition.
+    """
+
+    def wrapped(pred, target):
+        if condition(pred, target):
+            return metric_fn(pred, target)
+        return {}
+
+    return wrapped
+
+
+def distance_metric(criterion: CriterionF, name: str) -> MetricF:
+    """
+    Creates a metric that computes a distance between two masked groups.
+
+    The function splits the output tensor into two groups based on the target
+    mask: samples where `target != -1` form the "source" group, and samples
+    where `target == -1` form the "target" group. It then applies the given
+    criterion (e.g., a distance or loss) between these two groups.
+
+    If one of the groups is empty, the metric returns an empty dictionary.
+
+    Args:
+        criterion: A callable that takes two tensors `(source, target)` and
+            returns a scalar distance/loss (e.g., torch.cdist, F.mse_loss).
+        name: The key under which the computed value will be stored in the
+            returned dictionary.
+
+    Returns:
+        A metric function that returns a dict `{name: distance_value}`.
+    """
+
+    def metric_fn(output: Tensor, target: Tensor) -> dict[str, float]:
+        mask = target != -1
+        has_source = mask.any()
+        has_target = (~mask).any()
+
+        if not (has_source and has_target):
+            return {}
+
+        with no_grad():
+            value = criterion(output[mask], output[~mask]).item()
+
+        return {name: value}
+
+    return metric_fn
+
+
+def accuracy(output: Tensor, target: Tensor, topk=(1, 5)) -> dict[str, int | float]:
     """
     Computes the top-k accuracy for the specified values of k.
 
@@ -97,8 +155,6 @@ def accuracy(
         target: Ground truth labels with shape (batch_size,)
         topk:   Tuple of integers specifying which top-k accuracies to compute.
                 Default: (1, 5) computes top-1 and top-5 accuracy.
-        prefix: Optional string to prepend to the returned metric keys.
-                For example, prefix='val_' yields keys like 'val_acc1', 'val_acc5'.
 
     Returns:
         dict: Dict of top-k accuracy scores as percentages (0-100).
@@ -116,70 +172,6 @@ def accuracy(
         res = {}
         for k in topk:
             correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
-            res[f'{prefix}acc{k}'] = correct_k.mul_(100.0 / batch_size).item()
+            res[f'acc{k}'] = correct_k.mul_(100.0 / batch_size).item()
 
     return res
-
-
-def mmd(output: Tensor, target: Tensor) -> dict[str, int | float]:
-    """
-    Computes Maximum Mean Discrepancy (MMD) between source and target.
-
-    Splits `output` into source (`target != -1`) and target (`target == -1`)
-    subsets. Returns an empty dict if either subset is missing.
-
-    Args:
-        output: Model outputs.
-        target: Labels with -1 indicating target domain.
-
-    Returns:
-        Dict with key 'mmd' and computed value, or empty dict.
-    """
-    mask = (target != -1).detach()
-    has_source = mask.any()
-    has_target = (~mask).any()
-
-    if not (has_source and has_target):
-        return {}
-
-    mmd_criterion = MMD()
-
-    with no_grad():
-        source_d = output[mask]
-        target_d = output[~mask]
-
-        res = mmd_criterion(source_d, target_d).item()
-
-    return {'mmd': res}
-
-
-def coral(output: Tensor, target: Tensor) -> dict[str, int | float]:
-    """
-    Computes Coral between source and target.
-
-    Splits `output` into source (`target != -1`) and target (`target == -1`)
-    subsets. Returns an empty dict if either subset is missing.
-
-    Args:
-        output: Model outputs.
-        target: Labels with -1 indicating target domain.
-
-    Returns:
-        Dict with key 'coral' and computed value, or empty dict.
-    """
-    mask = (target != -1).detach()
-    has_source = mask.any()
-    has_target = (~mask).any()
-
-    if not (has_source and has_target):
-        return {}
-
-    coral_criterion = Coral()
-
-    with no_grad():
-        source_d = output[mask]
-        target_d = output[~mask]
-
-        res = coral_criterion(source_d, target_d).item()
-
-    return {'coral': res}

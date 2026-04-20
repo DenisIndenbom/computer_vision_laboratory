@@ -11,11 +11,11 @@ from methods import TrainArgs, register
 from utils.criterion import MMD
 from utils.dataset import DomainDataset
 from utils.gradient import freeze_params
-from utils.metrics import accuracy, bundle, metrics_with_mask, mmd
+from utils.metrics import accuracy, bundle, distance_metric, with_mask
 from utils.sampler import DomainBatchSampler
 from utils.trainer import train
 from utils.transforms import base_transforms, train_source_transforms, train_target_transforms
-from utils.typing import TrainHookF
+from utils.typing import CriterionF, TrainHookF
 
 from .common import VisDA2017Source, VisDA2017Target, VisDA2017Validation
 
@@ -51,7 +51,7 @@ class Criterion(nn.Module):
 def build_hook(
     start_lambda: float, end_lambda: float, start_epoch: int, end_epoch: int
 ) -> TrainHookF:
-    def hook(epoch: int, model: nn.Module, optim: optim.Optimizer, criterion: nn.Module) -> None:
+    def hook(epoch: int, model: nn.Module, optim: optim.Optimizer, criterion: CriterionF) -> None:
         t = min(max((epoch - start_epoch) / (end_epoch - start_epoch), 0.0), 1.0)
         new_lambda = start_lambda + t * (end_lambda - start_lambda)
 
@@ -137,7 +137,7 @@ def resnet50_mmd(args: TrainArgs):
         ]
     )
     loss = Criterion(model, lambda_mmd=mmd_lambda_start)
-    metrics = bundle([metrics_with_mask(accuracy), mmd])
+    metrics = bundle([with_mask(accuracy), distance_metric(MMD(), 'mmd')])
 
     # Setup hook for updating lambda
     hook = None

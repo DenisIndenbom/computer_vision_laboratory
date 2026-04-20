@@ -11,11 +11,11 @@ from methods import TrainArgs, register
 from utils.criterion import Coral
 from utils.dataset import DomainDataset
 from utils.gradient import freeze_params
-from utils.metrics import accuracy, bundle, coral, metrics_with_mask
+from utils.metrics import accuracy, bundle, distance_metric, with_mask
 from utils.sampler import DomainBatchSampler
 from utils.trainer import train
 from utils.transforms import base_transforms, train_source_transforms, train_target_transforms
-from utils.typing import MetricF, TrainHookF
+from utils.typing import CriterionF, MetricF, TrainHookF
 
 from .common import VisDA2017Source, VisDA2017Target, VisDA2017Validation
 
@@ -51,7 +51,7 @@ class Criterion(nn.Module):
 def build_hook(
     start_lambda: float, end_lambda: float, start_epoch: int, end_epoch: int
 ) -> TrainHookF:
-    def hook(epoch: int, model: nn.Module, optim: optim.Optimizer, criterion: nn.Module) -> None:
+    def hook(epoch: int, model: nn.Module, optim: optim.Optimizer, criterion: CriterionF) -> None:
         t = min(max((epoch - start_epoch) / (end_epoch - start_epoch), 0.0), 1.0)
         new_lambda = start_lambda + t * (end_lambda - start_lambda)
 
@@ -62,6 +62,8 @@ def build_hook(
 
 
 def coral_fl(model) -> MetricF:
+    coral = distance_metric(Coral(), 'coral')
+
     def metric(_: torch.Tensor, target: torch.Tensor) -> dict[str, int | float]:
         feat_fl = model.feat_fl_
 
@@ -146,7 +148,7 @@ def resnet50_coral(args: TrainArgs):
         ]
     )
     loss = Criterion(model, lambda_coral=coral_lambda_start)
-    metrics = bundle([metrics_with_mask(accuracy), coral_fl(model)])
+    metrics = bundle([with_mask(accuracy), coral_fl(model)])
 
     # Setup hook for updating lambda
     hook = None

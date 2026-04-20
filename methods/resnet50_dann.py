@@ -9,7 +9,7 @@ from torchvision.models import ResNet50_Weights
 from methods import TrainArgs, register
 from utils.dataset import DomainDataset
 from utils.gradient import freeze_rand_params
-from utils.metrics import accuracy_at, bundle, metrics_with_mask, metrics_with_slice
+from utils.metrics import bundle
 from utils.models import ResNetDANN
 from utils.sampler import DomainBatchSampler
 from utils.trainer import train
@@ -100,7 +100,7 @@ def resnet50_dann(args: TrainArgs):
     optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'])
     loss = Criterion()
     # TODO: Add metric for domain classification
-    metrics = bundle([metrics_with_slice(metrics_with_mask(accuracy_at(prefix='class_')), 0)])
+    metrics = bundle([])
 
     # Launch training
     train(

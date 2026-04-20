@@ -11,7 +11,13 @@ class DatasetLike(Protocol):
 
 
 # output, target
+CriterionF = Callable[[Tensor, Tensor], Tensor]
+
+# output, target
 MetricF = Callable[[Tensor, Tensor], dict[str, int | float]]
 
+# output, target
+ConditionF = Callable[[Tensor, Tensor], bool]
+
 # epoch, model, optimizer, criterion
-TrainHookF = Callable[[int, Module, Optimizer, Module], None]
+TrainHookF = Callable[[int, Module, Optimizer, CriterionF], None]
