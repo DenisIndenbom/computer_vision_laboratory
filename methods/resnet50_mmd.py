@@ -135,6 +135,8 @@ def resnet50_mmd(args: TrainArgs):
             {'params': model.layer4.parameters(), 'lr': args['learning_rate'] / 10},
             {'params': model.layer3.parameters(), 'lr': args['learning_rate'] / 10},
         ]
+        if imagenet_weights
+        else model.parameters()
     )
     loss = Criterion(model, lambda_mmd=mmd_lambda_start)
     metrics = bundle([with_mask(accuracy), distance_metric(MMD(), 'mmd')])

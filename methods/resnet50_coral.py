@@ -146,6 +146,8 @@ def resnet50_coral(args: TrainArgs):
             {'params': model.layer4.parameters(), 'lr': args['learning_rate'] / 10},
             {'params': model.layer3.parameters(), 'lr': args['learning_rate'] / 10},
         ]
+        if imagenet_weights
+        else model.parameters()
     )
     loss = Criterion(model, lambda_coral=coral_lambda_start)
     metrics = bundle([with_mask(accuracy), coral_fl(model)])
