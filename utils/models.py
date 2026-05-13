@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 import torch
 from torch import nn
 from torchvision.models import ResNet50_Weights, resnet50
@@ -12,7 +14,7 @@ class ResNetDANN(nn.Module):
         super().__init__()
 
         backbone = resnet50(weights=weights)
-        self.features = nn.Sequential(*list(backbone.children())[:-2])
+        self.features = nn.Sequential(OrderedDict(list(backbone.named_children())[:-2]))
         self.avgpool = backbone.avgpool
         num_features = backbone.fc.in_features
 

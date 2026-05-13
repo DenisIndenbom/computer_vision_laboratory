@@ -18,6 +18,7 @@ MetricF = Callable[[Tensor, Tensor], dict[str, int | float]]
 
 # output, target
 ConditionF = Callable[[Tensor, Tensor], bool]
+TransformF = Callable[[Any, Any], tuple[Any, Any]]
 
 # epoch, model, optimizer, criterion
 TrainHookF = Callable[[int, Module, Optimizer, CriterionF], None]

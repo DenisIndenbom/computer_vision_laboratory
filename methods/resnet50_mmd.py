@@ -129,15 +129,17 @@ def resnet50_mmd(args: TrainArgs):
     model.to(device)
 
     # Setup optimizer, loss and metrics
-    optimizer = optim.AdamW(
-        [
-            {'params': model.fc.parameters(), 'lr': args['learning_rate']},
-            {'params': model.layer4.parameters(), 'lr': args['learning_rate'] / 10},
-            {'params': model.layer3.parameters(), 'lr': args['learning_rate'] / 10},
-        ]
-        if imagenet_weights
-        else model.parameters()
-    )
+    if imagenet_weights:
+        optimizer = optim.AdamW(
+            [
+                {'params': model.fc.parameters(), 'lr': args['learning_rate']},
+                {'params': model.layer4.parameters(), 'lr': args['learning_rate'] / 10},
+                {'params': model.layer3.parameters(), 'lr': args['learning_rate'] / 10},
+            ]
+        )
+    else:
+        optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'])
+
     loss = Criterion(model, lambda_mmd=mmd_lambda_start)
     metrics = bundle([with_mask(accuracy), distance_metric(MMD(), 'mmd')])
 

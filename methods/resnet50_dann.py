@@ -7,9 +7,18 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision.models import ResNet50_Weights
 
 from methods import TrainArgs, register
-from utils.dataset import DomainDataset
-from utils.gradient import freeze_rand_params
-from utils.metrics import bundle
+from utils.dataset import DomainDataset, split_dataset
+from utils.gradient import freeze_params
+from utils.metrics import (
+    accuracy,
+    binary_accuracy,
+    bundle,
+    with_mask,
+    with_prefix,
+    with_slice,
+    with_transform,
+    apply_if,
+)
 from utils.models import ResNetDANN
 from utils.sampler import DomainBatchSampler
 from utils.trainer import train
@@ -22,19 +31,21 @@ class Criterion(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.ce = nn.CrossEntropyLoss()
-        self.be = nn.BCEWithLogitsLoss()
+        self.class_loss = nn.CrossEntropyLoss()
+        self.domain_loss = nn.BCEWithLogitsLoss()
 
     def forward(self, pred: tuple[torch.Tensor, torch.Tensor], y: torch.Tensor):
-        class_label, domain_label = pred
+        class_logits, domain_logits = pred
         mask = y != -1
 
-        class_loss = self.ce(class_label[mask], y[mask])
+        class_loss = torch.tensor(0.0, device=y.device)
+        if mask.any():
+            class_loss = self.class_loss(class_logits[mask], y[mask])
 
-        if mask.all():
-            domain_loss = self.ce(domain_label, mask)
-        else:
-            domain_loss = torch.tensor(0, device=y.device)
+        domain_loss = torch.tensor(0.0, device=y.device)
+        if (~mask).any():
+            domain_target = (~mask).float().unsqueeze(1)
+            domain_loss = self.domain_loss(domain_logits, domain_target)
 
         return class_loss + domain_loss
 
@@ -46,7 +57,6 @@ def resnet50_dann(args: TrainArgs):
 
     # Load env vars
     imagenet_weights = bool(os.getenv('IMAGENET_WEIGHTS', 'false') == 'true')
-    freeze_ratio = float(os.getenv('FREEZE_RATIO', 0.0))
     dann_lambda = float(os.getenv('DANN_LAMBDA', 1.0))
 
     # Prepare arguments
@@ -59,6 +69,10 @@ def resnet50_dann(args: TrainArgs):
     source_dataset = VisDA2017Source(args['data'], transform=train_source_transforms, download=True)
     target_dataset = VisDA2017Target(args['data'], transform=train_target_transforms, download=True)
     val_dataset = VisDA2017Validation(args['data'], transform=base_transforms, download=True)
+
+    _, source_dataset = split_dataset(source_dataset, 0.1)
+    _, target_dataset = split_dataset(target_dataset, 0.1)
+    _, val_dataset = split_dataset(val_dataset, 0.1)
 
     train_dataset = DomainDataset(source_dataset, target_dataset)
 
@@ -84,23 +98,55 @@ def resnet50_dann(args: TrainArgs):
     )
 
     # Setup model
-    model = ResNetDANN(
-        num_classes=12,
-        lambda_=dann_lambda,
-        weights=ResNet50_Weights.IMAGENET1K_V2 if imagenet_weights else None,
-    )
-    model.to(device)
-
-    if freeze_ratio > 0.0:
-        freeze_rand_params(
-            model.named_parameters(), freeze_ratio, device, seed, ['fc.weight', 'fc.bias']
+    if not imagenet_weights:
+        model = ResNetDANN(num_classes=12, lambda_=dann_lambda)
+    else:
+        model = ResNetDANN(
+            num_classes=12, lambda_=dann_lambda, weights=ResNet50_Weights.IMAGENET1K_V2
         )
 
+        # Freeze params to prevent overfitting.
+        to_exclude = [
+            name
+            for name, _ in model.named_parameters()
+            if name.startswith(
+                ('features.layer3', 'features.layer4', 'classifier', 'domain_classifier')
+            )
+        ]
+        freeze_params(model.named_parameters(), exclude=to_exclude)
+    model.to(device)
+
     # Setup optimizer, loss and metrics
-    optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'])
+    if imagenet_weights:
+        param_groups = [
+            {'params': model.classifier.parameters(), 'lr': args['learning_rate']},
+            {'params': model.domain_classifier.parameters(), 'lr': args['learning_rate']},
+            {'params': model.features.layer4.parameters(), 'lr': args['learning_rate'] / 10},  # type: ignore
+            {'params': model.features.layer3.parameters(), 'lr': args['learning_rate'] / 10},  # type: ignore
+        ]
+    else:
+        param_groups = [{'params': model.parameters(), 'lr': args['learning_rate']}]
+
+    optimizer = optim.AdamW(param_groups)
     loss = Criterion()
-    # TODO: Add metric for domain classification
-    metrics = bundle([])
+    metrics = bundle(
+        [
+            with_slice(with_mask(accuracy), 0),
+            apply_if(
+                with_prefix(
+                    with_slice(
+                        with_transform(
+                            binary_accuracy,
+                            lambda pred, target: (pred, target == -1),
+                        ),
+                        1,
+                    ),
+                    'domain_',
+                ),
+                lambda pred, target: bool((target == -1).any().item()),
+            ),
+        ]
+    )
 
     # Launch training
     train(

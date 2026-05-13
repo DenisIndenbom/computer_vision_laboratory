@@ -1,6 +1,6 @@
 from torch import Tensor, long, no_grad, zeros
 
-from .typing import ConditionF, CriterionF, MetricF
+from .typing import ConditionF, CriterionF, MetricF, TransformF
 
 
 def bundle(metrics: list[MetricF]) -> MetricF:
@@ -70,6 +70,25 @@ def with_slice(orig_metrics_fn: MetricF, index: int) -> MetricF:
     return wrapped
 
 
+def with_kwargs(orig_metrics_fn: MetricF, **kwargs) -> MetricF:
+    """
+    Wraps a metrics function to forward specified keyword arguments.
+
+    Args:
+        orig_metrics_fn: Callable that computes metrics from `(pred, y)` and
+                         possibly additional keyword arguments.
+        **kwargs: Keyword arguments to forward to the metrics function.
+
+    Returns:
+        Wrapped metrics function.
+    """
+
+    def wrapped(pred, y):
+        return orig_metrics_fn(pred, y, **kwargs)
+
+    return wrapped
+
+
 def with_prefix(metric_fn: MetricF, prefix: str) -> MetricF:
     """
     Wraps a metrics function to prepend a prefix to all returned metric keys.
@@ -105,6 +124,26 @@ def apply_if(metric_fn: MetricF, condition: ConditionF) -> MetricF:
         if condition(pred, target):
             return metric_fn(pred, target)
         return {}
+
+    return wrapped
+
+
+def with_transform(metric_fn: MetricF, transform: TransformF) -> MetricF:
+    """
+    Wraps a metrics function to apply a preprocessing transform to pred and target.
+
+    Args:
+        metric_fn: Metric function to call with transformed inputs.
+        transform: Callable that takes `(pred, target)` and returns a tuple
+                   `(transformed_pred, transformed_target)`.
+
+    Returns:
+        Wrapped metrics function that preprocesses the inputs before calling `metric_fn`.
+    """
+
+    def wrapped(pred, target):
+        pred_t, target_t = transform(pred, target)
+        return metric_fn(pred_t, target_t)
 
     return wrapped
 
@@ -175,3 +214,39 @@ def accuracy(output: Tensor, target: Tensor, topk=(1, 5)) -> dict[str, int | flo
             res[f'acc{k}'] = correct_k.mul_(100.0 / batch_size).item()
 
     return res
+
+
+def binary_accuracy(output: Tensor, target: Tensor) -> dict[str, float]:
+    """
+    Computes accuracy for binary classification.
+
+    Supports two common output formats:
+    - Single logit per sample (shape: (batch_size,) or (batch_size, 1)):
+      uses sigmoid and threshold 0.5.
+    - Two logits per sample (shape: (batch_size, 2)):
+      uses argmax (equivalent to softmax).
+
+    Args:
+        output: Model predictions/logits. Either shape (batch_size,), (batch_size, 1),
+                or (batch_size, 2).
+        target: Ground truth labels with shape (batch_size,), containing 0 or 1.
+
+    Returns:
+        dict: Dict with key 'acc' and value as accuracy percentage (0-100).
+    """
+
+    with no_grad():
+        batch_size = target.size(0)
+
+        if output.ndim == 2 and output.size(1) == 2:
+            pred = output.argmax(dim=1)
+        else:
+            out = output.squeeze(-1)
+            pred = (out.sigmoid() > 0.5).long()
+
+        target = target.long()
+
+        correct = pred.eq(target).float().sum()
+        acc = correct.mul_(100.0 / batch_size).item()
+
+    return {'acc': acc}

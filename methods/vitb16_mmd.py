@@ -140,7 +140,7 @@ def vitb16_mmd(args: TrainArgs):
             {'params': model.encoder.layers[11].parameters(), 'lr': args['learning_rate'] / 10},
         ]
     else:
-        param_groups = model.parameters()
+        param_groups = [{'params': model.parameters(), 'lr': args['learning_rate']}]
 
     optimizer = optim.AdamW(param_groups)
     loss = Criterion(model, lambda_mmd=mmd_lambda_start)
