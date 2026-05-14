@@ -122,7 +122,7 @@ def resnet50_dann(args: TrainArgs):
     else:
         param_groups = [{'params': model.parameters(), 'lr': args['learning_rate']}]
 
-    optimizer = optim.AdamW(param_groups, weight_decay=1e-3)
+    optimizer = optim.AdamW(param_groups)
     loss = Criterion()
     metrics = bundle(
         [
