@@ -1,5 +1,4 @@
 import os
-from typing import cast
 
 import torch
 from torch import nn, optim
@@ -15,7 +14,6 @@ from utils.metrics import accuracy, bundle, distance_metric, with_mask
 from utils.sampler import DomainBatchSampler
 from utils.trainer import train
 from utils.transforms import base_transforms, train_source_transforms, train_target_transforms
-from utils.typing import CriterionF, TrainHookF
 
 from .common import VisDA2017Source, VisDA2017Target, VisDA2017Validation
 
@@ -48,19 +46,6 @@ class Criterion(nn.Module):
         return cls_loss + self.lambda_mmd * mmd
 
 
-def build_hook(
-    start_lambda: float, end_lambda: float, start_epoch: int, end_epoch: int
-) -> TrainHookF:
-    def hook(epoch: int, model: nn.Module, optim: optim.Optimizer, criterion: CriterionF) -> None:
-        t = min(max((epoch - start_epoch) / (end_epoch - start_epoch), 0.0), 1.0)
-        new_lambda = start_lambda + t * (end_lambda - start_lambda)
-
-        cast(Criterion, criterion).lambda_mmd = new_lambda
-        print(f'New lambda: {new_lambda}')
-
-    return hook
-
-
 @register('resnet50_mmd')
 def resnet50_mmd(args: TrainArgs):
     if not torch.cuda.is_available() and args['device'].startswith('cuda'):
@@ -68,10 +53,7 @@ def resnet50_mmd(args: TrainArgs):
 
     # Load env vars
     imagenet_weights = bool(os.getenv('IMAGENET_WEIGHTS', 'false') == 'true')
-    mmd_lambda_start = float(os.getenv('MMD_LAMBDA_START', 0.5))
-    mmd_lambda_end = float(os.getenv('MMD_LAMBDA_END', 0.5))
-    mmd_start_epoch = int(os.getenv('MMD_START_EPOCH', 0))
-    mmd_ramp_epochs = int(os.getenv('MMD_RAMP_EPOCHS', 0))
+    mmd_lambda = float(os.getenv('MMD_LAMBDA', 1.0))
 
     # Prepare arguments
     summary_writer = SummaryWriter(os.path.join(args['logs'], args['name']))
@@ -140,18 +122,8 @@ def resnet50_mmd(args: TrainArgs):
     else:
         optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'])
 
-    loss = Criterion(model, lambda_mmd=mmd_lambda_start)
+    loss = Criterion(model, lambda_mmd=mmd_lambda)
     metrics = bundle([with_mask(accuracy), distance_metric(MMD(), 'mmd')])
-
-    # Setup hook for updating lambda
-    hook = None
-    if mmd_ramp_epochs > 0:
-        hook = build_hook(
-            mmd_lambda_start,
-            mmd_lambda_end,
-            mmd_start_epoch,
-            mmd_start_epoch + mmd_ramp_epochs,
-        )
 
     # Launch training
     train(
@@ -169,5 +141,4 @@ def resnet50_mmd(args: TrainArgs):
         seed=seed,
         verbose=args['verbose'],
         summary_writer=summary_writer,
-        post_epoch_hook=hook,
     )

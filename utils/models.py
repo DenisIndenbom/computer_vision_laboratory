@@ -18,8 +18,16 @@ class ResNetDANN(nn.Module):
         self.avgpool = backbone.avgpool
         num_features = backbone.fc.in_features
 
-        self.classifier = nn.Linear(num_features, num_classes)
-        self.domain_classifier = nn.Linear(num_features, 1)
+        self.classifier = nn.Sequential(
+            nn.Dropout(0.5),
+            nn.Linear(num_features, num_classes),
+        )
+        self.domain_classifier = nn.Sequential(
+            nn.Linear(num_features, 1024),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(1024, 1),
+        )
         self.lambda_ = lambda_
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:

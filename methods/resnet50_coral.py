@@ -1,5 +1,4 @@
 import os
-from typing import cast
 
 import torch
 from torch import nn, optim
@@ -15,7 +14,7 @@ from utils.metrics import accuracy, bundle, distance_metric, with_mask
 from utils.sampler import DomainBatchSampler
 from utils.trainer import train
 from utils.transforms import base_transforms, train_source_transforms, train_target_transforms
-from utils.typing import CriterionF, MetricF, TrainHookF
+from utils.typing import MetricF
 
 from .common import VisDA2017Source, VisDA2017Target, VisDA2017Validation
 
@@ -48,19 +47,6 @@ class Criterion(nn.Module):
         return cls_loss + self.lambda_coral * coral
 
 
-def build_hook(
-    start_lambda: float, end_lambda: float, start_epoch: int, end_epoch: int
-) -> TrainHookF:
-    def hook(epoch: int, model: nn.Module, optim: optim.Optimizer, criterion: CriterionF) -> None:
-        t = min(max((epoch - start_epoch) / (end_epoch - start_epoch), 0.0), 1.0)
-        new_lambda = start_lambda + t * (end_lambda - start_lambda)
-
-        cast(Criterion, criterion).lambda_coral = new_lambda
-        print(f'New lambda: {new_lambda}')
-
-    return hook
-
-
 def coral_fl(model) -> MetricF:
     coral = distance_metric(Coral(), 'coral')
 
@@ -79,10 +65,7 @@ def resnet50_coral(args: TrainArgs):
 
     # Load env vars
     imagenet_weights = bool(os.getenv('IMAGENET_WEIGHTS', 'false') == 'true')
-    coral_lambda_start = float(os.getenv('CORAL_LAMBDA_START', 0.1))
-    coral_lambda_end = float(os.getenv('CORAL_LAMBDA_END', 0.1))
-    coral_start_epoch = int(os.getenv('CORAL_START_EPOCH', 0))
-    coral_ramp_epochs = int(os.getenv('CORAL_RAMP_EPOCHS', 0))
+    coral_lambda = float(os.getenv('CORAL_LAMBDA', 1.0))
 
     # Prepare arguments
     summary_writer = SummaryWriter(os.path.join(args['logs'], args['name']))
@@ -151,18 +134,8 @@ def resnet50_coral(args: TrainArgs):
     else:
         optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'])
 
-    loss = Criterion(model, lambda_coral=coral_lambda_start)
+    loss = Criterion(model, lambda_coral=coral_lambda)
     metrics = bundle([with_mask(accuracy), coral_fl(model)])
-
-    # Setup hook for updating lambda
-    hook = None
-    if coral_ramp_epochs > 0:
-        hook = build_hook(
-            coral_lambda_start,
-            coral_lambda_end,
-            coral_start_epoch,
-            coral_start_epoch + coral_ramp_epochs,
-        )
 
     # Launch training
     train(
@@ -180,5 +153,4 @@ def resnet50_coral(args: TrainArgs):
         seed=seed,
         verbose=args['verbose'],
         summary_writer=summary_writer,
-        post_epoch_hook=hook,
     )

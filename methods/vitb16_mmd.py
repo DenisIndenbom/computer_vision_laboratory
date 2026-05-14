@@ -65,7 +65,7 @@ def vitb16_mmd(args: TrainArgs):
 
     # Load env vars
     imagenet_weights = bool(os.getenv('IMAGENET_WEIGHTS', 'false') == 'true')
-    mmd_lambda_start = float(os.getenv('MMD_LAMBDA_START', 0.5))
+    mmd_lambda = float(os.getenv('MMD_LAMBDA', 1.0))
 
     # Prepare arguments
     summary_writer = SummaryWriter(os.path.join(args['logs'], args['name']))
@@ -143,7 +143,7 @@ def vitb16_mmd(args: TrainArgs):
         param_groups = [{'params': model.parameters(), 'lr': args['learning_rate']}]
 
     optimizer = optim.AdamW(param_groups)
-    loss = Criterion(model, lambda_mmd=mmd_lambda_start)
+    loss = Criterion(model, lambda_mmd=mmd_lambda)
     metrics = bundle([with_mask(accuracy), mmd_fl(model)])
 
     # Launch training

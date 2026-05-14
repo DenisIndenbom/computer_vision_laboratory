@@ -30,24 +30,23 @@ from .common import VisDA2017Source, VisDA2017Target, VisDA2017Validation
 class Criterion(nn.Module):
     def __init__(self):
         super().__init__()
-
         self.class_loss = nn.CrossEntropyLoss()
         self.domain_loss = nn.BCEWithLogitsLoss()
 
-    def forward(self, pred: tuple[torch.Tensor, torch.Tensor], y: torch.Tensor):
+    def forward(self, pred, y):
         class_logits, domain_logits = pred
-        mask = y != -1
+        source_mask = y != -1
 
-        class_loss = torch.tensor(0.0, device=y.device)
-        if mask.any():
-            class_loss = self.class_loss(class_logits[mask], y[mask])
+        loss = torch.tensor(0.0, device=y.device)
 
-        domain_loss = torch.tensor(0.0, device=y.device)
-        if (~mask).any():
-            domain_target = (~mask).float().unsqueeze(1)
-            domain_loss = self.domain_loss(domain_logits, domain_target)
+        if source_mask.any():
+            loss += self.class_loss(class_logits[source_mask], y[source_mask])
 
-        return class_loss + domain_loss
+        if (~source_mask).any():
+            domain_target = (~source_mask).float().unsqueeze(1)
+            loss += self.domain_loss(domain_logits, domain_target)
+
+        return loss
 
 
 @register('resnet50_dann')
@@ -123,7 +122,7 @@ def resnet50_dann(args: TrainArgs):
     else:
         param_groups = [{'params': model.parameters(), 'lr': args['learning_rate']}]
 
-    optimizer = optim.AdamW(param_groups)
+    optimizer = optim.AdamW(param_groups, weight_decay=1e-3)
     loss = Criterion()
     metrics = bundle(
         [
