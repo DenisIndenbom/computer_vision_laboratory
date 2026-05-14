@@ -114,10 +114,10 @@ def vitb16_mmd(args: TrainArgs):
             for name, _ in model.named_parameters()
             if name.startswith(
                 (
-                    'encoder.layers.8',
-                    'encoder.layers.9',
-                    'encoder.layers.10',
-                    'encoder.layers.11',
+                    'encoder.layers.encoder_layer_8',
+                    'encoder.layers.encoder_layer_9',
+                    'encoder.layers.encoder_layer_10',
+                    'encoder.layers.encoder_layer_11',
                     'heads',
                 )
             )
