@@ -69,12 +69,6 @@ def vitb16_dann(args: TrainArgs):
     target_dataset = VisDA2017Target(args['data'], transform=train_target_transforms, download=True)
     val_dataset = VisDA2017Validation(args['data'], transform=base_transforms, download=True)
 
-    from utils.dataset import split_dataset
-
-    _, source_dataset = split_dataset(source_dataset, 0.1)
-    _, target_dataset = split_dataset(target_dataset, 0.1)
-    _, val_dataset = split_dataset(val_dataset, 0.1)
-
     train_dataset = DomainDataset(source_dataset, target_dataset)
 
     train_sampler = DomainBatchSampler(
