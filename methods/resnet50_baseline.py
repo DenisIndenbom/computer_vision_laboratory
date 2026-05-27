@@ -4,31 +4,22 @@ import torch
 from torch import nn, optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from torchvision.models import resnet50
+from torchvision.models import ResNet50_Weights, resnet50
 
 from methods import TrainArgs, register
-from utils.dataset import BaseImageFolderDataset
+from methods.common import VisDA2017Source, VisDA2017Validation
 from utils.metrics import accuracy
 from utils.trainer import train
 from utils.transforms import base_transforms, train_source_transforms
 
 
-class VisDA2017Train(BaseImageFolderDataset):
-    URL = 'http://csr.bu.edu/ftp/visda17/clf/train.tar'
-    ARCHIVE_NAME = 'train.tar'
-    EXTRACTED_FOLDER = 'train'
-
-
-class VisDA2017Validation(BaseImageFolderDataset):
-    URL = 'http://csr.bu.edu/ftp/visda17/clf/validation.tar'
-    ARCHIVE_NAME = 'validation.tar'
-    EXTRACTED_FOLDER = 'validation'
-
-
-@register('vitb16_pretrain')
+@register('resnet50_baseline')
 def vitb16_pretrain(args: TrainArgs):
     if not torch.cuda.is_available() and args['device'].startswith('cuda'):
         raise Exception('cuda is not available')
+
+    # Load env vars
+    imagenet_weights = bool(os.getenv('IMAGENET_WEIGHTS', 'false') == 'true')
 
     # Prepare arguments
     summary_writer = SummaryWriter(os.path.join(args['logs'], args['name']))
@@ -36,7 +27,7 @@ def vitb16_pretrain(args: TrainArgs):
     device = torch.device(args['device'])
 
     # Load datasets
-    train_dataset = VisDA2017Train(args['data'], transform=train_source_transforms, download=True)
+    train_dataset = VisDA2017Source(args['data'], transform=train_source_transforms, download=True)
     val_dataset = VisDA2017Validation(args['data'], transform=base_transforms, download=True)
 
     # Setup dataloaders
@@ -56,7 +47,12 @@ def vitb16_pretrain(args: TrainArgs):
     )
 
     # Setup model and optimizer
-    model = resnet50(num_classes=12)
+    if not imagenet_weights:
+        model = resnet50(num_classes=12)
+    else:
+        model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2)
+        model.fc = nn.Linear(512 * 4, 12)
+
     optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'])
     loss = nn.CrossEntropyLoss()
 
