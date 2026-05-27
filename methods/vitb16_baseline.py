@@ -14,7 +14,7 @@ from utils.transforms import base_transforms, train_source_transforms
 
 
 @register('vitb16_baseline')
-def vitb16_pretrain(args: TrainArgs):
+def vitb16_baseline(args: TrainArgs):
     if not torch.cuda.is_available() and args['device'].startswith('cuda'):
         raise Exception('cuda is not available')
 
@@ -40,9 +40,9 @@ def vitb16_pretrain(args: TrainArgs):
     )
     val_dataloader = DataLoader(
         dataset=val_dataset,
-        batch_size=args['workers'],
+        batch_size=args['batch_size'],
         shuffle=False,
-        num_workers=4,
+        num_workers=args['workers'],
         pin_memory=True,
     )
 
