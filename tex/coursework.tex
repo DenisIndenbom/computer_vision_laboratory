@@ -357,12 +357,14 @@ cross-domain generalization.
 Figure~\ref{fig:resnet50_pretraining} presents the training and validation loss (left) and Top-1/Top-5 accuracy
 (right).
 
-\begin{figure}[h]
+\begin{figure}[ht]
 	\centering
 	\includegraphics[width=\linewidth]{resnet50_pretraining.png}
 	\caption{\textit{Training and validation loss (left) and accuracy (right) during ResNet50 pre-training.}}
 	\label{fig:resnet50_pretraining}
 \end{figure}
+
+\newpage
 
 During the first five epochs, training and validation metrics show similar trends, indicating consistent performance
 within the source domain. Training loss decreases steadily from approximately 1.5 to below 0.6, while Top-1 accuracy
@@ -384,7 +386,7 @@ Standard data augmentation techniques were applied during training.
 
 Figure~\ref{fig:vitb16_pretraining} presents the training and validation loss (left) and Top-1/Top-5 accuracy (right).
 
-\begin{figure}[h]
+\begin{figure}[ht]
 	\centering
 	\includegraphics[width=\linewidth]{vitb16_pretraining.png}
 	\caption{\textit{Training and validation loss (left) and accuracy (right) during ViT-B/16 pre-training.}}
@@ -405,12 +407,12 @@ this source data is insufficient for the target domain, confirming an urgent nee
 strategies to bridge this gap.
 
 \section{Applying Domain Transition methods}
-\subsection{ResNet-50 + MMD}
-\subsection{ViT-B/16 + MMD}
-\subsection{ResNet-50 + CORAL}
-\subsection{ViT-B/16 + CORAL}
-\subsection{ResNet-50 + DANN}
-\subsection{ViT-B/16 + DANN}
+\subsection{ResNet-50 with Maximum Mean Discrepancy (MMD)}
+\subsection{ViT-B/16 with Maximum Mean Discrepancy (MMD)}
+\subsection{ResNet-50 with Correlation Alignment (CORAL)}
+\subsection{ViT-B/16 with Correlation Alignment (CORAL)}
+\subsection{ResNet-50 with Domain Adversarial Training (DANN)}
+\subsection{ViT-B/16 with Domain Adversarial Training (DANN)}
 
 \newpage
 \printbibliography[heading=bibintoc]

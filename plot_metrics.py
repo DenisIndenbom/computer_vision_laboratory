@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 import json
 import argparse
 import sys
 
 
-def plot_training_metrics(metrics_dict):
+def plot_training_metrics(metrics_dict: dict[str, list[int | float]]):
     """
     Plot training and validation metrics from a dictionary.
+    Training and validation are drawn in separate axes for clarity.
 
     Args:
         metrics_dict: Dictionary containing lists of metrics for each epoch
@@ -16,28 +18,68 @@ def plot_training_metrics(metrics_dict):
     """
     epochs = range(1, len(metrics_dict['train_loss']) + 1)
 
-    # Create figure with subplots
-    _, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
+    additional_metrics_keys = ['train_mmd', 'train_coral', 'train_domain_acc']
+    additional_metric = next((key for key in additional_metrics_keys if key in metrics_dict), None)
 
-    # Plot 1: Loss curves
-    ax1.plot(epochs, metrics_dict['train_loss'], 'b-', label='Training Loss', linewidth=2)
-    ax1.plot(epochs, metrics_dict['val_loss'], 'r-', label='Validation Loss', linewidth=2)
-    ax1.set_xlabel('Epochs')
-    ax1.set_ylabel('Loss')
-    ax1.set_title('Training and Validation Loss')
-    ax1.legend()
-    ax1.grid(True, alpha=0.3)
+    # Define figure size and grid layout
+    if additional_metric:
+        # 3 rows, 2 columns: top 2 rows for loss/acc, bottom row for additional metric
+        fig = plt.figure(figsize=(12, 12))
+        gs = gridspec.GridSpec(3, 2, figure=fig, height_ratios=[1, 1, 0.7])
+        ax_train_loss = fig.add_subplot(gs[0, 0])
+        ax_val_loss = fig.add_subplot(gs[1, 0])
+        ax_train_acc = fig.add_subplot(gs[0, 1])
+        ax_val_acc = fig.add_subplot(gs[1, 1])
+        ax_additional = fig.add_subplot(gs[2, :])  # span both columns
+    else:
+        fig, ((ax_train_loss, ax_train_acc), (ax_val_loss, ax_val_acc)) = plt.subplots(
+            2, 2, figsize=(12, 10)
+        )
+        ax_additional = None
 
-    # Plot 2: Accuracy curves (Top-1 and Top-5)
-    ax2.plot(epochs, metrics_dict['train_acc1'], 'b-', label='Train Top-1', linewidth=2)
-    ax2.plot(epochs, metrics_dict['val_acc1'], 'r-', label='Val Top-1', linewidth=2)
-    ax2.plot(epochs, metrics_dict['train_acc5'], 'b--', label='Train Top-5', linewidth=2, alpha=0.7)
-    ax2.plot(epochs, metrics_dict['val_acc5'], 'r--', label='Val Top-5', linewidth=2, alpha=0.7)
-    ax2.set_xlabel('Epochs')
-    ax2.set_ylabel('Accuracy (%)')
-    ax2.set_title('Training and Validation Accuracy')
-    ax2.legend()
-    ax2.grid(True, alpha=0.3)
+    # Plot training and validation loss
+    ax_train_loss.plot(epochs, metrics_dict['train_loss'], 'b-', label='Training Loss', linewidth=2)
+    ax_train_loss.set_xlabel('Epochs')
+    ax_train_loss.set_ylabel('Loss')
+    ax_train_loss.set_title('Training Loss')
+    ax_train_loss.legend()
+    ax_train_loss.grid(True, alpha=0.3)
+
+    ax_val_loss.plot(epochs, metrics_dict['val_loss'], 'r-', label='Validation Loss', linewidth=2)
+    ax_val_loss.set_xlabel('Epochs')
+    ax_val_loss.set_ylabel('Loss')
+    ax_val_loss.set_title('Validation Loss')
+    ax_val_loss.legend()
+    ax_val_loss.grid(True, alpha=0.3)
+
+    # Plot training and validation accuracy
+    ax_train_acc.plot(epochs, metrics_dict['train_acc1'], 'b-', label='Top-1', linewidth=2)
+    ax_train_acc.plot(
+        epochs, metrics_dict['train_acc5'], 'b--', label='Top-5', linewidth=2, alpha=0.7
+    )
+    ax_train_acc.set_xlabel('Epochs')
+    ax_train_acc.set_ylabel('Accuracy (%)')
+    ax_train_acc.set_title('Training Accuracy')
+    ax_train_acc.legend()
+    ax_train_acc.grid(True, alpha=0.3)
+
+    ax_val_acc.plot(epochs, metrics_dict['val_acc1'], 'r-', label='Top-1', linewidth=2)
+    ax_val_acc.plot(epochs, metrics_dict['val_acc5'], 'r--', label='Top-5', linewidth=2, alpha=0.7)
+    ax_val_acc.set_xlabel('Epochs')
+    ax_val_acc.set_ylabel('Accuracy (%)')
+    ax_val_acc.set_title('Validation Accuracy')
+    ax_val_acc.legend()
+    ax_val_acc.grid(True, alpha=0.3)
+
+    # Additional metric plot if provided
+    if additional_metric is not None and ax_additional is not None:
+        label = additional_metric.replace('train_', '').upper()
+        ax_additional.plot(epochs, metrics_dict[additional_metric], 'g-', label=label, linewidth=2)
+        ax_additional.set_xlabel('Epochs')
+        ax_additional.set_ylabel('Metric Value')
+        ax_additional.set_title(f'Training {label}')
+        ax_additional.legend()
+        ax_additional.grid(True, alpha=0.3)
 
     plt.tight_layout()
 
@@ -67,7 +109,7 @@ def main():
         '--no-show', action='store_true', help='Do not display the plot (useful with --save)'
     )
 
-    parser.add_argument('--dpi', type=int, default=100, help='DPI for saved figure (default: 100)')
+    parser.add_argument('--dpi', type=int, default=150, help='DPI for saved figure (default: 150)')
 
     args = parser.parse_args()
 
