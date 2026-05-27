@@ -29,7 +29,7 @@ maxbibnames=99
 \usepackage{booktabs}
 \usepackage[flushleft]{threeparttable}
 \usepackage{tablefootnote}
-
+\usepackage{float}
 \usepackage{chngcntr}
 \counterwithin{table}{section}
 \counterwithin{figure}{section}
@@ -72,10 +72,10 @@ maxbibnames=99
 \addcontentsline{toc}{section}{Abstract}
 
 This project addresses the problem of domain shift in computer vision, focusing on the transition from high-quality
-synthetic and studio-grade image data to real-world user-generated photographs with variable quality. A unified
-training pipeline is developed to investigate domain adaptation strategies that enable effective transfer between
-source and target domains. Baseline image classification models (ResNet-50 and ViT-B/16) are implemented and evaluated
-for robustness under varying real-world image quality.
+synthetic image data to real-world user-generated photographs with variable quality. A unified training pipeline is
+developed to investigate domain adaptation strategies that enable effective transfer between source and target domains.
+Baseline image classification models (ResNet-50 and ViT-B/16) are implemented and evaluated for robustness under
+varying real-world image quality.
 
 A comparative analysis examines performance degradation across domains and assesses the effectiveness of different
 adaptation approaches. The project deliverables include a reproducible training pipeline, a public repository of
@@ -86,16 +86,16 @@ systems.
 \section*{\foreignlanguage{russian}{Аннотация}}
 \addcontentsline{toc}{section}{Аннотация}
 \foreignlanguage{russian}{
-	Этот проект направлен на решение проблемы изменения предметной области в компьютерном зрении, фокусируясь на переходе от высококачественных
+	Этот проект направлен на решение проблемы сдвига предметной области в компьютерном зрении, фокусируясь на переходе от высококачественных
 	синтетических и студийных изображений к реальным пользовательским фотографиям с переменным качеством. Разработан унифицированный
-	конвейер обучения для изучения стратегий адаптации к домену, которые обеспечивают эффективную передачу данных между
-	исходным и целевым доменами. Реализованы базовые модели классификации изображений (ResNet-50 и ViT-B/16), которые оцениваются
-	на предмет надежности при различном качестве изображения в реальных условиях.
+	пайплайн обучения для изучения стратегий адаптации к предметной области, обеспечивающих эффективный перенос знаний между
+	исходной и целевой областями. Реализованы базовые модели классификации изображений (ResNet-50 и ViT-B/16), которые оцениваются
+	на устойчивость при различном качестве изображений в реальных условиях.
 
-	В ходе сравнительного анализа анализируется снижение производительности в разных областях и оценивается эффективность различных
-	подходов к адаптации. Конечные результаты проекта включают в себя воспроизводимую систему обучения, общедоступное хранилище
-	результатов экспериментов и курсовую работу с описанием методологии и выводов. Полученные результаты способствуют более глубокому
-	пониманию проблем адаптации к предметной области и дают практическую информацию для разработки надежных
+	В ходе сравнительного анализа исследуется падение производительности при переходе между областями и оценивается эффективность различных
+	подходов к адаптации. Конечные результаты проекта включают в себя воспроизводимый пайплайн обучения, общедоступный репозиторий
+	с результатами экспериментов и курсовую работу с описанием методологии и выводов. Полученные результаты способствуют более глубокому
+	пониманию проблем адаптации к предметной области и дают практические рекомендации для разработки надёжных
 	систем компьютерного зрения.
 }
 
@@ -141,38 +141,34 @@ Individual project.
 \section{Literature Review}
 \label{sec:litreview}
 
-Domain shift remains a fundamental challenge for visual recognition models deployed outside the laboratory. Early work
-on domain adaptation introduced methods that align feature distributions across domains. Discrepancy-based approaches
-minimise statistical distances such as Maximum Mean Discrepancy \cite{gretton2012kernel, long2015learning} or align
-second-order statistics via CORAL \cite{sun2016deep}. Adversarial strategies, pioneered by Domain-Adversarial Neural
-Networks (DANN) \cite{ganin2016domain} and later extended by ADDA \cite{tzeng2017adversarial}, employ a gradient
-reversal layer to learn domain-invariant representations. These techniques provide principled ways to reduce the gap
-between source and target distributions without requiring target labels.
+Domain shift between training and deployment distributions remains a fundamental obstacle for visual recognition
+systems. Early domain adaptation research introduced statistical alignment methods to reduce this mismatch.
+Discrepancy‑based approaches minimise measures such as Maximum Mean Discrepancy (MMD)~\cite{gretton2012kernel,
+	long2015learning} or align second‑order statistics via CORAL~\cite{sun2016deep}. Adversarial strategies, pioneered by
+Domain‑Adversarial Neural Networks (DANN)~\cite{ganin2016domain} and later extended by
+ADDA~\cite{tzeng2017adversarial}, employ gradient reversal to learn domain‑invariant features. These methods
+convincingly show that feature‑space alignment can substantially reduce domain discrepancy without requiring target
+labels.
 
-The synthetic-to-real gap is a particularly severe instance of domain shift. High-quality synthetic or studio images
-differ substantially from real-world photographs in texture, lighting, and background clutter. Richter \textit{et~al.}
-\cite{richter2016playing} demonstrated that large-scale synthetic data can be generated from game engines, while
-Shrivastava \textit{et~al.} \cite{shrivastava2017learning} refined synthetic images using adversarial training to
-improve realism and downstream task performance. Despite such advances, models trained on pristine data often fail when
-confronted with the unpredictable degradations typical of user-generated content.
+The synthetic‑to‑real gap represents a particularly severe instance of domain shift. High‑quality rendered or simulated
+images differ markedly from real‑world photographs in texture, lighting, and background clutter. Large‑scale synthetic
+data can be generated from game engines~\cite{richter2016playing}, and adversarial refinement can improve
+photorealism~\cite{shrivastava2017learning}. Nevertheless, the domain shift caused by real‑world artefacts — variable
+illumination, blur, sensor noise — remains challenging. Standard robustness benchmarks such as
+ImageNet‑C~\cite{hendrycks2019benchmarking} systematically evaluate model sensitivity to common corruptions, yet they
+do not explicitly model the structured distribution mismatch between synthetic and real imagery. The VisDA‑2017
+dataset~\cite{visda2017} specifically targets this gap with a large‑scale 12‑class benchmark for synthetic‑to‑real
+adaptation.
 
-Alongside algorithmic progress, standardised benchmarks have become essential for measuring robustness. ImageNet-C
-\cite{hendrycks2019benchmarking} systematically evaluates model resilience to common corruptions such as noise, blur,
-and weather artifacts, but it does not explicitly model the structured domain gap between synthetic and real imagery.
-The VisDA-2017 challenge \cite{visda2017} directly targets synthetic-to-real adaptation with a large-scale 12-class
-dataset, providing a rigorous testbed for domain adaptation methods.
-
-More recently, Vision Transformers (ViTs) \cite{dosovitskiy2020image} have emerged as strong alternatives to
-convolutional networks. While their performance on clean benchmarks often surpasses that of CNNs, their behaviour under
-domain shift and image quality degradation remains an active area of investigation. Understanding the relative
-robustness of convolutional and transformer-based architectures is therefore crucial for designing reliable real-world
-systems.
-
-In summary, a mature body of domain adaptation techniques exists, yet a systematic comparison of their effectiveness
-for synthetic-to-real transfer—especially when combined with modern architectures and realistic visual
-corruptions—remains incomplete. This project addresses that gap by evaluating both discrepancy-based and adversarial
-adaptation strategies on a challenging synthetic-to-real benchmark, using ResNet-50 and ViT-B/16 as representative
+Vision Transformers (ViTs)~\cite{dosovitskiy2020image} have recently emerged as strong alternatives to convolutional
+networks. While their performance on clean data often surpasses that of CNNs, their behaviour under domain shift and
+visual corruptions is not yet fully understood, motivating a systematic comparison of transformer and convolutional
 backbones.
+
+In summary, a rich body of domain adaptation techniques exists, yet a controlled experimental comparison that couples
+modern architectures (ResNet‑50 and ViT‑B/16), representative alignment strategies (MMD, CORAL, DANN), and a
+challenging synthetic‑to‑real benchmark under realistic quality variation is still missing. This project addresses that
+gap by providing a unified pipeline and an empirical evaluation of these components.
 
 \section{Detailed Work Plan}
 \label{sec:workplan}
@@ -187,12 +183,12 @@ The project is divided into five sequential phases.
 
 \subsection{Phase 2: Model and Training Pipeline Implementation}
 \begin{itemize}
-	\item Pre-train ResNet-50 and ViT-B/16 for classification on source domain.
+	\item Train ResNet-50 and ViT-B/16 for classification only on source domain.
 	\item Establish baseline metrics on the validation set using these source-only models.
-	\item Use standarв augmentation - random cropping, horizontal flip, GaussianBlur and etc.
+	\item Use standard augmentation - random cropping, horizontal flip, GaussianBlur and etc.
 \end{itemize}
 
-\subsection{Phase 3: Appying Domain Transition methods}
+\subsection{Phase 3: Applying Domain Transition methods}
 \begin{itemize}
 	\item Fine-tune ResNet-50 and ViT-B/16 (initialized with ImageNet-pretrained weights) using selected domain adaptation
 	      strategies.
@@ -317,8 +313,9 @@ for learning domain-invariant features, forming a solid foundation for the compa
 
 \subsection{Suitable Dataset}
 VisDA-2017 \cite{visda2017} is the largest synth-to-real dataset, introduced in Visual Domain Adaptation Challenge. It
-contains 12 classes, with 152K training images and 55K validation images. The dataset provides a challenging
-large-scale setting for unsupervised domain adaptation, making it highly suitable for research.
+contains 12 classes, with \textit{$\sim 152K$} training images, \textit{$\sim 72K$} validation images and \textit{$\sim
+		55K$} test images. The dataset provides a challenging large-scale setting for unsupervised domain adaptation, making it
+highly suitable for research.
 
 \subsection{Key Challenges}
 The primary challenge in synthetic-to-real domain adaptation is the significant domain gap: models trained on clean
@@ -331,25 +328,32 @@ suppress task-relevant information and reduce overall performance.
 As the main machine learning framework, PyTorch was chosen due to its flexibility, performance and the built-in
 implementation of ResNet and ViT-B architectures within Torch Vision submodule.
 
-Part of the computations were performed in Google Colab, while the remaining experiments were conducted on an RTX 4090.
+All computations were performed on an RTX 4090.
 
 \subsection{Training Pipeline}
-Prior to train models, I implemented fundamental utilities for metrics, loss functions, data loaders and training
+Prior to train models, was implemented fundamental utilities for metrics, loss functions, data loaders and training
 procedure. All models were fitted using the pipeline shown in Figure~\ref{fig:training_baseline}.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 	\centering
 	\includegraphics[width=\linewidth]{training_baseline.png}
 	\caption{Baseline training pipeline.}
 	\label{fig:training_baseline}
 \end{figure}
 
-\subsection{ResNet50 Pre-training}
-In the first stage, a ResNet50 model was pre-trained for image classification on the source (synthetic) domain. The
-network was initialized with random weights and optimized using the Adam optimizer to minimize cross-entropy loss.
-Standard data augmentation techniques (random cropping and horizontal flipping) were applied during training.
+After initialization, the pipeline configures the device and seed, then determines whether to resume training by
+loading a checkpoint and restoring the optimizer and RNG state. Once inside the main epoch loop, it executes a training
+step comprising batch loading, forward/backward passes, loss computation, weight updates, and metric aggregation. This
+is followed by a validation step that performs a forward pass to compute validation loss and aggregate metrics. Each
+epoch concludes with metric logging, and an optional checkpoint save, before checking if further epochs are required;
+if not, training completes.
 
-The pre-training process lasted 16 epochs. During the first five epochs, 20\% of the source training data was used as a
+\subsection{ResNet50 Training on source domain}
+In the first stage, a ResNet50 model was trained for image classification on the source (synthetic) domain. The network
+was initialized with random weights and optimized using the AdamW optimizer to minimize cross-entropy loss. Standard
+data augmentation techniques (random cropping and horizontal flipping) were applied during training.
+
+The training process lasted 16 epochs. During the first five epochs, 20\% of the source training data was used as a
 validation subset. Starting from epoch 6, the validation approach was modified: the validation set was replaced with
 data sampled from the target (real-world) domain. This change was introduced to obtain an early estimate of
 cross-domain generalization.
@@ -357,14 +361,12 @@ cross-domain generalization.
 Figure~\ref{fig:resnet50_pretraining} presents the training and validation loss (left) and Top-1/Top-5 accuracy
 (right).
 
-\begin{figure}[ht]
+\begin{figure}[H]
 	\centering
 	\includegraphics[width=\linewidth]{resnet50_pretraining.png}
-	\caption{\textit{Training and validation loss (left) and accuracy (right) during ResNet50 pre-training.}}
+	\caption{\textit{Training and validation loss (left) and accuracy (right) during ResNet50 training only on the source domain.}}
 	\label{fig:resnet50_pretraining}
 \end{figure}
-
-\newpage
 
 During the first five epochs, training and validation metrics show similar trends, indicating consistent performance
 within the source domain. Training loss decreases steadily from approximately 1.5 to below 0.6, while Top-1 accuracy
@@ -379,39 +381,122 @@ This behavior clearly demonstrates a crucial domain gap between synthetic and re
 fits the source distribution, it generalizes poorly to the target domain. These results justify the need for explicit
 domain adaptation strategies in subsequent stages of the project.
 
-\subsection{ViT-B/16 Pre-training}
+\subsection{ViT-B/16 Training on source domain}
 In the first stage, a ViT-B/16 model was pre-trained for image classification on the source (synthetic) domain. The
-network was initialized with random weights and optimized using the Adam optimizer to minimize cross-entropy loss.
+network was initialized with random weights and optimized using the AdamW optimizer to minimize cross-entropy loss.
 Standard data augmentation techniques were applied during training.
 
 Figure~\ref{fig:vitb16_pretraining} presents the training and validation loss (left) and Top-1/Top-5 accuracy (right).
 
-\begin{figure}[ht]
+\begin{figure}[H]
 	\centering
 	\includegraphics[width=\linewidth]{vitb16_pretraining.png}
-	\caption{\textit{Training and validation loss (left) and accuracy (right) during ViT-B/16 pre-training.}}
+	\caption{\textit{Training and validation loss (left) and accuracy (right) during ViT-B/16 training on the source domain.}}
 	\label{fig:vitb16_pretraining}
 \end{figure}
 
-During the 16 epochs of pre-training, a stark divergence between training and validation metrics is evident from the
-very first epoch. Training loss decreases consistently from roughly 1.5 to under 0.4, while validation loss steadily
-increases from approximately 3.5 to over 5.0. Correspondingly, training Top-1 accuracy improves from around 45\% to
-85\%, whereas validation Top-1 accuracy never exceeds 25\% and remains largely stagnant. Validation Top-5 accuracy
-plateaus near 60\%, significantly below the training Top-5 accuracy, which reaches 98\%.
+During the 16 epochs of training on synthetic domain, a stark divergence between training and validation metrics is
+evident from the very first epoch. Training loss decreases consistently from roughly 1.5 to under 0.4, while validation
+loss steadily increases from approximately 3.5 to over 5.0. Correspondingly, training Top-1 accuracy improves from
+around 45\% to 85\%, whereas validation Top-1 accuracy never exceeds 25\% and remains largely stagnant. Validation
+Top-5 accuracy plateaus near 60\%, significantly below the training Top-5 accuracy, which reaches 98\%.
 
 This immediate and sustained separation between the learning curves indicates that the ViT-B-16 model rapidly overfits
 the source domain and fails to generalize to the target domain from the very beginning. Unlike the ResNet50 analysis
 where the divergence was explicitly triggered by switching the validation set at epoch 6, here the severe domain gap is
-present throughout the entire training duration. The results unequivocally demonstrate that standard pre-training on
+present throughout the entire training duration. The results unequivocally demonstrate that standard training only on
 this source data is insufficient for the target domain, confirming an urgent need for explicit domain adaptation
 strategies to bridge this gap.
 
 \section{Applying Domain Transition methods}
+In the following experiments, models are initialized with pretrained ImageNet weights. The weights of the lower layers
+are frozen throughout the entire training process, while the higher layers remain unfrozen. The classification heads
+are initialized with random weights drawn from a uniform distribution $\mathcal{U}(-\sqrt{k}, \sqrt{k})$, where $k =
+	\frac{1}{\text{in\_features}}$. Additionally, the learning rate is set to $1 \times 10^{-4}$ for the classification
+head and $1 \times 10^{-5}$ for the unfrozen layers. Thus, these common steps are designed for fast convergence and
+stable training
+
+The models are optimized using the AdamW optimizer to minimize the sum of cross-entropy loss and domain transition
+regularization.
+
+The VisDA-2017 dataset was initially separated in three subsets: a training set, a validation set, and a test set,
+where the test set remains unlabeled. During the experiments, each training batch consists an equal number of samples
+from both the training and test sets. The training samples were used to compute the Cross-Entropy loss, while the test
+samples were used for the MMD criterion. Each validation batch comprises samples from the validation set.
+
 \subsection{ResNet-50 with Maximum Mean Discrepancy (MMD)}
+The backbone is initialized with ImageNet weights. The first convolutional layer (\texttt{Conv1} in
+Figure~\ref{fig:resnet50_mmd_arch}) and the first two \texttt{BottleNeck} blocks (\texttt{Layer1} and \texttt{Layer2}
+in Figure~\ref{fig:resnet50_mmd_arch}) are frozen, while the third and fourth blocks (\texttt{Layer3} and
+\texttt{Layer4} in Figure~\ref{fig:resnet50_mmd_arch}) remain trainable. Feature representations for MMD alignment are
+extracted at two stages: after \texttt{Layer3} (\texttt{feat\_l3}) and before \texttt{AvgPool} (\texttt{feat\_fl}). The
+two MMD values are averaged and scaled by \(\lambda\). The total loss combines Cross-Entropy (on source images) and the
+MMD regularization term. The learning rate is set to \(1 \times 10^{-4}\) for the classification head and \(1 \times
+10^{-5}\) for \texttt{Layer3} and \texttt{Layer4},and the MMD scaling factor \(\lambda\) is set to \(1\).
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{resnet50_mmd_arch.png}
+	\caption{Architecture diagram of ResNet50 with MMD.}
+	\label{fig:resnet50_mmd_arch}
+\end{figure}
+
+The results of experiment is shown in Figure~\ref{fig:resnet50_mmd}.
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{resnet50_mmd.png}
+	\caption{}
+	\label{fig:resnet50_mmd}
+\end{figure}
+
+The ResNet-50 with MMD achieves a validation Top-1 accuracy of 58.31\%, representing a substantial improvement over the
+baseline model, which only reached approximately 23\% on the target domain. This gain demonstrates that MMD alignment
+effectively reduces the domain shift between synthetic and real-world data. However, the persistent upward trend in
+validation loss—from 1.65 to 2.25—indicates that overfitting to the source distribution remains, and the model
+continues to struggle with perfect cross-domain generalization. Despite this, the 35-percentage-point accuracy increase
+confirms that MMD is a viable strategy for bridging the domain gap in this task.
+
 \subsection{ViT-B/16 with Maximum Mean Discrepancy (MMD)}
+The backbone is initialized with ImageNet weights. The patch embedding and positional encoding, along with the first
+eight encoder layers (\texttt{Encoder Layers 0--7} in Figure~\ref{fig:vitb16_mmd_arch}), are frozen, while the last
+four encoder layers (\texttt{Encoder Layers 8--11} in Figure~\ref{fig:vitb16_mmd_arch}) and the classification head (12
+classes) remain trainable. Feature representations for MMD alignment are extracted at two stages: after \texttt{Encoder
+	Layer 8} (\texttt{feat\_l8} in Figure~\ref{fig:vitb16_mmd_arch}) and before the classification head (\texttt{feat\_fl}
+in Figure~\ref{fig:vitb16_mmd_arch}). The two MMD values are averaged and scaled by \(\lambda\). The total loss
+combines Cross-Entropy (on source images) and the MMD regularization term. The learning rate is set to \(1 \times
+10^{-4}\) for the classification head and \(1 \times 10^{-5}\) for encoder layers 8--11, and the MMD scaling factor
+\(\lambda\) is set to \(1\).
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{vitb16_mmd_arch.png}
+	\caption{Architecture diagram of ViT-B/16 with MMD.}
+	\label{fig:vitb16_mmd_arch}
+\end{figure}
+
+The results of experiment is shown in Figure~\ref{fig:vitb16_mmd}.
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{vitb16_mmd.png}
+	\caption{}
+	\label{fig:vitb16_mmd}
+\end{figure}
+
+The ViT-B/16 with MMD achieves a final validation Top-1 accuracy of 70.76\% (with a peak of 72.16\% at epoch 14),
+representing a dramatic improvement over the baseline ViT-B/16 trained only on source domain, which stagnated at
+approximately 25\% on the target domain. While training loss decreases rapidly from 0.37 to 0.07 and training accuracy
+approaches 99.5\%, validation loss remains volatile and exhibits an overall upward trend from 1.21 to 1.25, indicating
+persistent overfitting to the source distribution. Validation Top-5 accuracy plateaus around 92\%, suggesting the model
+consistently captures the correct class within its top predictions but struggles with precise ranking. Although the
+45-percentage-point gain over the baseline confirms the effectiveness of MMD for bridging the domain gap, the unstable
+validation loss and non-monotonic accuracy improvements suggest that further fine-tuning of the \(\lambda\) parameter.
+
 \subsection{ResNet-50 with Correlation Alignment (CORAL)}
+
 \subsection{ViT-B/16 with Correlation Alignment (CORAL)}
+
 \subsection{ResNet-50 with Domain Adversarial Training (DANN)}
+
 \subsection{ViT-B/16 with Domain Adversarial Training (DANN)}
 
 \newpage
