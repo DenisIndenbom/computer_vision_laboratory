@@ -72,10 +72,9 @@ maxbibnames=99
 \addcontentsline{toc}{section}{Abstract}
 
 This project addresses the problem of domain shift in computer vision, focusing on the transition from high-quality
-synthetic image data to real-world user-generated photographs with variable quality. A unified training pipeline is
-developed to investigate domain adaptation strategies that enable effective transfer between source and target domains.
-Baseline image classification models (ResNet-50 and ViT-B/16) are implemented and evaluated for robustness under
-varying real-world image quality.
+synthetic image data to real-world user-generated photographs. A unified training pipeline is developed to investigate
+domain adaptation strategies that enable effective transfer between source and target domains. Baseline image
+classification models (ResNet-50 and ViT-B/16) are implemented and evaluated on the VisDA-2017 benchmark.
 
 A comparative analysis examines performance degradation across domains and assesses the effectiveness of different
 adaptation approaches. The project deliverables include a reproducible training pipeline, a public repository of
@@ -87,10 +86,10 @@ systems.
 \addcontentsline{toc}{section}{Аннотация}
 \foreignlanguage{russian}{
 	Этот проект направлен на решение проблемы сдвига предметной области в компьютерном зрении, фокусируясь на переходе от высококачественных
-	синтетических и студийных изображений к реальным пользовательским фотографиям с переменным качеством. Разработан унифицированный
+	синтетических и студийных изображений к реальным пользовательским фотографиям. Разработан унифицированный
 	пайплайн обучения для изучения стратегий адаптации к предметной области, обеспечивающих эффективный перенос знаний между
 	исходной и целевой областями. Реализованы базовые модели классификации изображений (ResNet-50 и ViT-B/16), которые оцениваются
-	на устойчивость при различном качестве изображений в реальных условиях.
+	на наборе данных VisDA-2017.
 
 	В ходе сравнительного анализа исследуется падение производительности при переходе между областями и оценивается эффективность различных
 	подходов к адаптации. Конечные результаты проекта включают в себя воспроизводимый пайплайн обучения, общедоступный репозиторий
@@ -101,7 +100,7 @@ systems.
 
 \section*{Keywords}
 \addcontentsline{toc}{section}{Keywords}
-Domain Adaptation, Synthetic-to-Real Transfer, Image Classification, Robustness Analysis, Computer Vision, ResNet-50, Vision Transformer, Environmental Degradation Simulation
+Domain Adaptation, Synthetic-to-Real Transfer, Image Classification, VisDA-2017, Computer Vision, ResNet-50, Vision Transformer
 
 \newpage
 
@@ -124,9 +123,8 @@ degradation across domains and explore reliable ways to measure cross-domain gen
 	      synthetic/studio images to real-world photographs, using the VisDA-2017 benchmark as a representative testbed.
 	\item Train baseline classification models (ResNet-50 and ViT-B/16) on the source domain and quantitatively assess the
 	      cross-domain performance gap without any adaptation, applying standard data augmentation throughout.
-	\item Implement and compare at least two distinct domain adaptation strategies, covering both discrepancy-based alignment
-	      (MMD, CORAL) and adversarial feature learning (DANN), and integrate them into both convolutional and transformer
-	      backbones.
+	\item Implement and compare three domain adaptation strategies: discrepancy-based alignment (MMD and CORAL) and adversarial
+	      feature learning (DANN), integrating them into both convolutional and transformer backbones.
 	\item Carry out a comprehensive comparative analysis across all models and conditions (source-only, adapted, and augmented
 	      inputs), examining accuracy degradation, feature distribution shifts via t-SNE/PCA, and relative robustness of CNN and
 	      ViT architectures.
@@ -192,9 +190,10 @@ The project is divided into five sequential phases.
 \begin{itemize}
 	\item Fine-tune ResNet-50 and ViT-B/16 (initialized with ImageNet-pretrained weights) using selected domain adaptation
 	      strategies.
-	\item Compare at least two adaptation approaches:
+	\item Compare three adaptation approaches:
 	      \begin{itemize}
-		      \item Feature alignment using Maximum Mean Discrepancy (MMD) or CORAL.
+		      \item Feature alignment using Maximum Mean Discrepancy (MMD).
+		      \item Feature alignment using Correlation Alignment (CORAL).
 		      \item Domain Adversarial Training (DANN-style gradient reversal).
 	      \end{itemize}
 	\item Analyze convergence behavior and adaptation stability across domains.
@@ -204,7 +203,6 @@ The project is divided into five sequential phases.
 \begin{itemize}
 	\item Evaluate baseline and adapted models on source and target domains.
 	\item Measure overall accuracy drop between domains.
-	\item Analyze feature distributions using t-SNE or PCA visualization.
 \end{itemize}
 
 \subsection{Phase 5: Repository and Reporting}
@@ -232,8 +230,6 @@ The project is divided into five sequential phases.
 	\item Analysis of domain shift impact, including:
 	      \begin{itemize}
 		      \item Accuracy drop from source to target domain
-		      \item Robustness under synthetic degradations
-		      \item Feature distribution visualization (e.g., t-SNE or PCA)
 	      \end{itemize}
 
 	\item Public GitHub repository with reproducible code, trained checkpoints, and documentation.
@@ -320,8 +316,6 @@ highly suitable for research.
 \subsection{Key Challenges}
 The primary challenge in synthetic-to-real domain adaptation is the significant domain gap: models trained on clean
 data struggle with the variability of real-world images, including differences in lighting, texture, and background.
-Another issue is over-adaptation, where strong alignment of feature distributions to enforce domain invariance may
-suppress task-relevant information and reduce overall performance.
 
 \section{Model and Training Pipeline Implementation}
 \subsection{Framework \& Computing power}
@@ -377,7 +371,7 @@ Figure~\ref{fig:vitb16_baseline} presents the training and validation loss and T
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=\linewidth]{vitb16_baseline.png}
-	\caption{\textit{}}
+	\caption{\textit{ViT-B/16 training curves on synthetic data.}}
 	\label{fig:vitb16_baseline}
 \end{figure}
 
@@ -518,6 +512,15 @@ is set to \(1\).
 
 \begin{figure}[H]
 	\centering
+	\includegraphics[width=\linewidth]{vitb16_coral_arch.png}
+	\caption{Architecture diagram of ViT-B/16 with CORAL.}
+	\label{fig:vitb16_coral_arch}
+\end{figure}
+
+The results of experiment is shown in Figure~\ref{fig:vitb16_coral}.
+
+\begin{figure}[H]
+	\centering
 	\includegraphics[width=\linewidth]{vitb16_coral.png}
 	\caption{ViT-B/16 training curves with CORAL alignment.}
 	\label{fig:vitb16_coral}
@@ -532,8 +535,72 @@ smaller than MMD's \(\sim\)12-point gain, reinforcing that higher-order moment a
 synthetic-to-real task and that second-order covariance alignment alone is insufficient.
 
 \subsection{ResNet-50 with Domain Adversarial Training (DANN)}
+In the case of domain adversarial training a gradient reversal layer and domain classification head were consistently
+added. The new head consists of two fully linear connected layers, with ReLU and Dropout (\textit{\(p = 0.5\)})
+activation functions in between. This architectural solution was chosen in order to create a strong competition between
+the feature extractor and the domain classification part of the network. Also, the new head is initialized with random
+weights, and reversed gradient is scaled by \(\lambda = 0.7\).
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{resnet50_dann_arch.png}
+	\caption{Architecture diagram of ResNet50 with DANN.}
+	\label{fig:resnet50_dann_arch}
+\end{figure}
+
+The results of experiment is shown in Figure~\ref{fig:resnet50_dann}.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{resnet50_dann.png}
+	\caption{ResNet50 training curves with with DANN.}
+	\label{fig:resnet50_dann}
+\end{figure}
+
+ResNet-50 with DANN achieves a final validation Top-1 accuracy of 62.67\% (peak 62.67\% at epoch 20), a substantial
+improvement over the baseline (43.5\%). Training loss decreases from 1.58 to 0.69, and training Top-1 accuracy reaches
+99.24\%, confirming strong source-domain memorization. Validation loss, however, rises from 1.68 to 2.38, indicating
+persistent overfitting. The domain classification accuracy (green curve) declines steadily from 82.4\% to 60.5\%,
+demonstrating that the feature extractor learns increasingly domain-invariant representations as the adversarial
+training progresses. Validation Top-5 accuracy stabilizes around 90\%, further supporting improved cross-domain
+generalization.
+
+The \(\sim\)19-percentage-point gain over the baseline surpasses both MMD (\(\sim\)58.3\%) and CORAL (\(\sim\)44.4\%),
+establishing DANN as the most effective domain adaptation method for ResNet-50 on this synthetic-to-real task. The
+strong improvement confirms that adversarial feature alignment, which directly encourages domain confusion, is superior
+to moment-based alignment (MMD) and second-order covariance alignment (CORAL) for this challenging domain shift.
 
 \subsection{ViT-B/16 with Domain Adversarial Training (DANN)}
+
+For ViT-B/16, the gradient reversal layer and domain classification head were added similarly. The domain head consists
+of two fully connected linear layers with ReLU and Dropout (\(p = 0.5\)) activations. The reversed gradient is scaled
+by \(\lambda = 0.7\), and the head is initialized with random weights.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{vitb16_dann_arch.png}
+	\caption{Architecture diagram of ViT-B/16 with DANN.}
+	\label{fig:vitb16_dann_arch}
+\end{figure}
+
+The results of the experiment are shown in Figure~\ref{fig:vitb16_dann}.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{vitb16_dann.png}
+	\caption{ViT-B/16 training curves with DANN.}
+	\label{fig:vitb16_dann}
+\end{figure}
+
+ViT-B/16 with DANN achieves a final validation Top-1 accuracy of 74.82\% (peak 74.82\% at epoch 20, with notable
+instability earlier, e.g., a sharp drop to 15.6\% at epoch 4 before recovery). Training loss decreases rapidly from
+1.42 to 0.71, and training Top-1 accuracy approaches 99.24\%, confirming strong source memorization. Validation loss
+fluctuates between 1.28 and 2.99, ending at 1.70, indicating persistent but milder overfitting compared to ResNet-50.
+The domain classification accuracy (green curve) declines from 60.4\% to 54.9\%, showing effective, though less
+pronounced, domain confusion. Validation Top-5 accuracy reaches 95.36\%, further validating improved generalization.
+
+The final validation Top-1 accuracy of 74.82\% surpasses both MMD (\(\sim\)70.76\%) and CORAL (\(\sim\)64.43\%),
+reaffirming that adversarial alignment achieves the highest performance for ViT-B/16 on this task.
 
 \newpage
 \printbibliography[heading=bibintoc]
