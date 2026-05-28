@@ -349,64 +349,55 @@ epoch concludes with metric logging, and an optional checkpoint save, before che
 if not, training completes.
 
 \subsection{ResNet50 Training on source domain}
-In the first stage, a ResNet50 model was trained for image classification on the source (synthetic) domain. The network
-was initialized with random weights and optimized using the AdamW optimizer to minimize cross-entropy loss. Standard
-data augmentation techniques (random cropping and horizontal flipping) were applied during training.
+In the first stage to determine baseline score, a ResNet50 model was trained for image classification on the source
+(synthetic) domain. The network was initialized with ImageNet weights and optimized using the AdamW optimizer with
+learning rate \(1 \times 10^{-5}\) to minimize cross-entropy loss. Standard data augmentation techniques (random
+cropping and horizontal flipping) were applied during training.
 
-The training process lasted 16 epochs. During the first five epochs, 20\% of the source training data was used as a
-validation subset. Starting from epoch 6, the validation approach was modified: the validation set was replaced with
-data sampled from the target (real-world) domain. This change was introduced to obtain an early estimate of
-cross-domain generalization.
-
-Figure~\ref{fig:resnet50_pretraining} presents the training and validation loss (left) and Top-1/Top-5 accuracy
-(right).
+Figure~\ref{fig:resnet50_baseline} presents the training and validation loss and Top-1/Top-5 accuracy.
 
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=\linewidth]{resnet50_pretraining.png}
-	\caption{\textit{Training and validation loss (left) and accuracy (right) during ResNet50 training only on the source domain.}}
-	\label{fig:resnet50_pretraining}
+	\includegraphics[width=\linewidth]{resnet50_baseline.png}
+	\caption{\textit{ResNet50 training curves on synthetic data.}}
+	\label{fig:resnet50_baseline}
 \end{figure}
 
-During the first five epochs, training and validation metrics show similar trends, indicating consistent performance
-within the source domain. Training loss decreases steadily from approximately 1.5 to below 0.6, while Top-1 accuracy
-improves from 48\% to around 80\%. Validation performance on the source-domain split follows a comparable trajectory.
-
-After switching the validation set to the target domain (epoch 6 onward), a significant performance drop is observed.
-Validation loss increases sharply (exceeding 6.0), and Top-1 accuracy decreases to approximately 20–25\%, while
-training performance continues to improve. By the final epoch, training Top-1 accuracy approaches 90\%, whereas
-target-domain validation accuracy remains near 23\%.
-
-This behavior clearly demonstrates a crucial domain gap between synthetic and real data. While the model effectively
-fits the source distribution, it generalizes poorly to the target domain. These results justify the need for explicit
-domain adaptation strategies in subsequent stages of the project.
+Training loss drops from 0.57 to 0.007 in 15 epochs, with Top-1 accuracy reaching 99.8\% and Top-5 100\%, indicating
+near-perfect source-domain memorization. Validation metrics diverge sharply: loss rises from 2.30 to 3.08, Top-1
+accuracy stagnates at 43–44\%, and Top-5 hovers near 75\%. This severe overfitting shows that ResNet50 features do not
+generalize to the real domain without adaptation.
 
 \subsection{ViT-B/16 Training on source domain}
-In the first stage, a ViT-B/16 model was pre-trained for image classification on the source (synthetic) domain. The
-network was initialized with random weights and optimized using the AdamW optimizer to minimize cross-entropy loss.
-Standard data augmentation techniques were applied during training.
+Similar to the ResNet50, a ViT-B/16 model was initialized with ImageNet weights and trained with the same
+hyperparameters and techniques.
 
-Figure~\ref{fig:vitb16_pretraining} presents the training and validation loss (left) and Top-1/Top-5 accuracy (right).
+Figure~\ref{fig:vitb16_baseline} presents the training and validation loss and Top-1/Top-5 accuracy.
 
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=\linewidth]{vitb16_pretraining.png}
-	\caption{\textit{Training and validation loss (left) and accuracy (right) during ViT-B/16 training on the source domain.}}
-	\label{fig:vitb16_pretraining}
+	\includegraphics[width=\linewidth]{vitb16_baseline.png}
+	\caption{\textit{}}
+	\label{fig:vitb16_baseline}
 \end{figure}
 
-During the 16 epochs of training on synthetic domain, a stark divergence between training and validation metrics is
-evident from the very first epoch. Training loss decreases consistently from roughly 1.5 to under 0.4, while validation
-loss steadily increases from approximately 3.5 to over 5.0. Correspondingly, training Top-1 accuracy improves from
-around 45\% to 85\%, whereas validation Top-1 accuracy never exceeds 25\% and remains largely stagnant. Validation
-Top-5 accuracy plateaus near 60\%, significantly below the training Top-5 accuracy, which reaches 98\%.
+Training converges even faster (loss 0.0055, Top-1 >99.8\%, Top-5 100\%). Validation loss drops to 1.42 at epoch 4 then
+rises to 1.78 with oscillations. Validation Top-1 accuracy ranges 55.8–61.5\% (mean ~58.5\%), Top-5 85–89.6\%. These
+values are substantially higher than ResNet50's, indicating better cross-domain generalization—likely due to ViT's
+global attention, which is less biased toward synthetic-specific local textures. Overfitting remains, but the baseline
+is clearly stronger.
 
-This immediate and sustained separation between the learning curves indicates that the ViT-B-16 model rapidly overfits
-the source domain and fails to generalize to the target domain from the very beginning. Unlike the ResNet50 analysis
-where the divergence was explicitly triggered by switching the validation set at epoch 6, here the severe domain gap is
-present throughout the entire training duration. The results unequivocally demonstrate that standard training only on
-this source data is insufficient for the target domain, confirming an urgent need for explicit domain adaptation
-strategies to bridge this gap.
+\subsection{Comparing baselines}
+Both models overfit (near-perfect training, low validation accuracy). However, ViT-B/16 outperforms ResNet50
+consistently:
+\begin{itemize}
+	\item \textbf{Top-1 validation:} ViT ~58.5\% vs. ResNet50 ~43.5\% (+15 p.p.).
+	\item \textbf{Top-5 validation:} ViT ~87.5\% vs. ResNet50 ~74.5\%.
+	\item \textbf{Validation loss:} ViT 1.5–1.8 vs. ResNet50 >2.8 (more confident predictions on real data).
+	\item \textbf{Stability:} ViT's higher level is maintained despite fluctuations; ResNet50's flat accuracy suggests a lower cross-domain ceiling.
+\end{itemize}
+Thus, pretrained ViT-B/16 provides a superior baseline for synthetic-to-real transfer, making it more promising for
+subsequent domain adaptation methods.
 
 \section{Applying Domain Transition methods}
 In the following experiments, models are initialized with pretrained ImageNet weights. The weights of the lower layers
@@ -414,7 +405,7 @@ are frozen throughout the entire training process, while the higher layers remai
 are initialized with random weights drawn from a uniform distribution $\mathcal{U}(-\sqrt{k}, \sqrt{k})$, where $k =
 	\frac{1}{\text{in\_features}}$. Additionally, the learning rate is set to $1 \times 10^{-4}$ for the classification
 head and $1 \times 10^{-5}$ for the unfrozen layers. Thus, these common steps are designed for fast convergence and
-stable training
+stable training.
 
 The models are optimized using the AdamW optimizer to minimize the sum of cross-entropy loss and domain transition
 regularization.
@@ -425,14 +416,12 @@ from both the training and test sets. The training samples were used to compute 
 samples were used for the MMD criterion. Each validation batch comprises samples from the validation set.
 
 \subsection{ResNet-50 with Maximum Mean Discrepancy (MMD)}
-The backbone is initialized with ImageNet weights. The first convolutional layer (\texttt{Conv1} in
-Figure~\ref{fig:resnet50_mmd_arch}) and the first two \texttt{BottleNeck} blocks (\texttt{Layer1} and \texttt{Layer2}
-in Figure~\ref{fig:resnet50_mmd_arch}) are frozen, while the third and fourth blocks (\texttt{Layer3} and
-\texttt{Layer4} in Figure~\ref{fig:resnet50_mmd_arch}) remain trainable. Feature representations for MMD alignment are
-extracted at two stages: after \texttt{Layer3} (\texttt{feat\_l3}) and before \texttt{AvgPool} (\texttt{feat\_fl}). The
-two MMD values are averaged and scaled by \(\lambda\). The total loss combines Cross-Entropy (on source images) and the
-MMD regularization term. The learning rate is set to \(1 \times 10^{-4}\) for the classification head and \(1 \times
-10^{-5}\) for \texttt{Layer3} and \texttt{Layer4},and the MMD scaling factor \(\lambda\) is set to \(1\).
+The first convolutional layer (\texttt{Conv1} in Figure~\ref{fig:resnet50_mmd_arch}) and the first two
+\texttt{BottleNeck} blocks (\texttt{Layer1} and \texttt{Layer2} in Figure~\ref{fig:resnet50_mmd_arch}) are frozen,
+while the third and fourth blocks (\texttt{Layer3} and \texttt{Layer4} in Figure~\ref{fig:resnet50_mmd_arch}) remain
+trainable. Feature representations for MMD alignment are extracted at two stages: after \texttt{Layer3}
+(\texttt{feat\_l3}) and before \texttt{AvgPool} (\texttt{feat\_fl}). The two MMD values are averaged and scaled by
+\(\lambda\). The MMD scaling factor \(\lambda\) is set to \(1\).
 
 \begin{figure}[H]
 	\centering
@@ -457,14 +446,12 @@ continues to struggle with perfect cross-domain generalization. Despite this, th
 confirms that MMD is a viable strategy for bridging the domain gap in this task.
 
 \subsection{ViT-B/16 with Maximum Mean Discrepancy (MMD)}
-The backbone is initialized with ImageNet weights. The patch embedding and positional encoding, along with the first
-eight encoder layers (\texttt{Encoder Layers 0--7} in Figure~\ref{fig:vitb16_mmd_arch}), are frozen, while the last
-four encoder layers (\texttt{Encoder Layers 8--11} in Figure~\ref{fig:vitb16_mmd_arch}) and the classification head (12
-classes) remain trainable. Feature representations for MMD alignment are extracted at two stages: after \texttt{Encoder
-	Layer 8} (\texttt{feat\_l8} in Figure~\ref{fig:vitb16_mmd_arch}) and before the classification head (\texttt{feat\_fl}
-in Figure~\ref{fig:vitb16_mmd_arch}). The two MMD values are averaged and scaled by \(\lambda\). The total loss
-combines Cross-Entropy (on source images) and the MMD regularization term. The learning rate is set to \(1 \times
-10^{-4}\) for the classification head and \(1 \times 10^{-5}\) for encoder layers 8--11, and the MMD scaling factor
+The patch embedding and positional encoding, along with the first eight encoder layers (\texttt{Encoder Layers 0--7} in
+Figure~\ref{fig:vitb16_mmd_arch}), are frozen, while the last four encoder layers (\texttt{Encoder Layers 8--11} in
+Figure~\ref{fig:vitb16_mmd_arch}) and the classification head (12 classes) remain trainable. Feature representations
+for MMD alignment are extracted at two stages: after \texttt{Encoder Layer 8} (\texttt{feat\_l8} in
+Figure~\ref{fig:vitb16_mmd_arch}) and before the classification head (\texttt{feat\_fl} in
+Figure~\ref{fig:vitb16_mmd_arch}). The two MMD values are averaged and scaled by \(\lambda\). The MMD scaling factor
 \(\lambda\) is set to \(1\).
 
 \begin{figure}[H]
