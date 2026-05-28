@@ -6,7 +6,7 @@ import argparse
 import sys
 
 
-def plot_training_metrics(metrics_dict: dict[str, list[int | float]]):
+def plot_training_metrics(metrics_dict: dict[str, list[int | float]], title: str | None = None):
     """
     Plot training and validation metrics from a dictionary.
     Training and validation are drawn in separate axes for clarity.
@@ -81,6 +81,9 @@ def plot_training_metrics(metrics_dict: dict[str, list[int | float]]):
         ax_additional.legend()
         ax_additional.grid(True, alpha=0.3)
 
+    if title is not None:
+        fig.suptitle(title, fontsize=22)
+
     plt.tight_layout()
 
 
@@ -96,6 +99,14 @@ def main():
         '--file',
         dest='filename',
         help='Path to the JSON file containing training metrics (alternative to positional argument)',
+    )
+
+    parser.add_argument(
+        '-t',
+        '--title',
+        type=str,
+        default=None,
+        help='Set the plot title (default: no title)',
     )
 
     parser.add_argument(
@@ -127,7 +138,7 @@ def main():
         with open(filename, 'r') as file:
             metrics = json.load(file)
 
-        plot_training_metrics(metrics)
+        plot_training_metrics(metrics, args.title)
 
         # Save the plot if requested
         if args.save:

@@ -153,8 +153,8 @@ labels.
 The synthetic‑to‑real gap represents a particularly severe instance of domain shift. High‑quality rendered or simulated
 images differ markedly from real‑world photographs in texture, lighting, and background clutter. Large‑scale synthetic
 data can be generated from game engines~\cite{richter2016playing}, and adversarial refinement can improve
-photorealism~\cite{shrivastava2017learning}. Nevertheless, the domain shift caused by real‑world artefacts — variable
-illumination, blur, sensor noise — remains challenging. Standard robustness benchmarks such as
+photorealism~\cite{shrivastava2017learning}. Nevertheless, the domain shift caused by real‑world artefacts -- variable
+illumination, blur, sensor noise -- remains challenging. Standard robustness benchmarks such as
 ImageNet‑C~\cite{hendrycks2019benchmarking} systematically evaluate model sensitivity to common corruptions, yet they
 do not explicitly model the structured distribution mismatch between synthetic and real imagery. The VisDA‑2017
 dataset~\cite{visda2017} specifically targets this gap with a large‑scale 12‑class benchmark for synthetic‑to‑real
@@ -439,11 +439,11 @@ The results of experiment is shown in Figure~\ref{fig:resnet50_mmd}.
 \end{figure}
 
 The ResNet-50 with MMD achieves a validation Top-1 accuracy of 58.31\%, representing a substantial improvement over the
-baseline model, which only reached approximately 23\% on the target domain. This gain demonstrates that MMD alignment
+baseline model, which reached approximately 43.5\% on the target domain. This gain demonstrates that MMD alignment
 effectively reduces the domain shift between synthetic and real-world data. However, the persistent upward trend in
 validation loss—from 1.65 to 2.25—indicates that overfitting to the source distribution remains, and the model
-continues to struggle with perfect cross-domain generalization. Despite this, the 35-percentage-point accuracy increase
-confirms that MMD is a viable strategy for bridging the domain gap in this task.
+continues to struggle with perfect cross-domain generalization. Despite this, the ~15-percentage-point accuracy
+increase confirms that MMD is a viable strategy for bridging the domain gap in this task.
 
 \subsection{ViT-B/16 with Maximum Mean Discrepancy (MMD)}
 The patch embedding and positional encoding, along with the first eight encoder layers (\texttt{Encoder Layers 0--7} in
@@ -470,13 +470,14 @@ The results of experiment is shown in Figure~\ref{fig:vitb16_mmd}.
 \end{figure}
 
 The ViT-B/16 with MMD achieves a final validation Top-1 accuracy of 70.76\% (with a peak of 72.16\% at epoch 14),
-representing a dramatic improvement over the baseline ViT-B/16 trained only on source domain, which stagnated at
-approximately 25\% on the target domain. While training loss decreases rapidly from 0.37 to 0.07 and training accuracy
-approaches 99.5\%, validation loss remains volatile and exhibits an overall upward trend from 1.21 to 1.25, indicating
-persistent overfitting to the source distribution. Validation Top-5 accuracy plateaus around 92\%, suggesting the model
-consistently captures the correct class within its top predictions but struggles with precise ranking. Although the
-45-percentage-point gain over the baseline confirms the effectiveness of MMD for bridging the domain gap, the unstable
-validation loss and non-monotonic accuracy improvements suggest that further fine-tuning of the \(\lambda\) parameter.
+representing a dramatic improvement over the baseline ViT-B/16 trained only on the source domain, which stagnated at
+approximately 58.5\% on the target domain. While training loss decreases rapidly from 0.37 to 0.07 and training
+accuracy approaches 99.5\%, validation loss remains volatile and exhibits an overall upward trend from 1.21 to 1.25,
+indicating persistent overfitting to the source distribution. Validation Top-5 accuracy plateaus around 92\%,
+suggesting the model consistently captures the correct class within its top predictions but struggles with precise
+ranking. Although the ~12-percentage-point gain over the baseline confirms the effectiveness of MMD for bridging the
+domain gap, the unstable validation loss and non-monotonic accuracy improvements suggest that further fine-tuning of
+the \(\lambda\) parameter may be necessary.
 
 \subsection{ResNet-50 with Correlation Alignment (CORAL)}
 
