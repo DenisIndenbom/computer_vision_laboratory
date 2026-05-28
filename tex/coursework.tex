@@ -383,7 +383,7 @@ Figure~\ref{fig:vitb16_baseline} presents the training and validation loss and T
 
 Training converges even faster (loss 0.0055, Top-1 >99.8\%, Top-5 100\%). Validation loss drops to 1.42 at epoch 4 then
 rises to 1.78 with oscillations. Validation Top-1 accuracy ranges 55.8–61.5\% (mean ~58.5\%), Top-5 85–89.6\%. These
-values are substantially higher than ResNet50's, indicating better cross-domain generalization—likely due to ViT's
+values are substantially higher than ResNet50's, indicating better cross-domain generalization--likely due to ViT's
 global attention, which is less biased toward synthetic-specific local textures. Overfitting remains, but the baseline
 is clearly stronger.
 
@@ -434,16 +434,19 @@ The results of experiment is shown in Figure~\ref{fig:resnet50_mmd}.
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=\linewidth]{resnet50_mmd.png}
-	\caption{}
+	\caption{ResNet50 training curves with MMD alignment.}
 	\label{fig:resnet50_mmd}
 \end{figure}
 
-The ResNet-50 with MMD achieves a validation Top-1 accuracy of 58.31\%, representing a substantial improvement over the
-baseline model, which reached approximately 43.5\% on the target domain. This gain demonstrates that MMD alignment
-effectively reduces the domain shift between synthetic and real-world data. However, the persistent upward trend in
-validation loss—from 1.65 to 2.25—indicates that overfitting to the source distribution remains, and the model
-continues to struggle with perfect cross-domain generalization. Despite this, the ~15-percentage-point accuracy
-increase confirms that MMD is a viable strategy for bridging the domain gap in this task.
+ResNet-50 with MMD achieves a final validation Top-1 accuracy of 58.31\%, a substantial improvement over the baseline
+(43.5\%). Training loss drops from 0.87 to 0.03, and training Top-1 accuracy reaches 99.7\%, confirming strong
+memorization of the source distribution. The MMD metric (green curve) decreases from 0.278 to 0.076, indicating
+effective alignment of source and target feature distributions. Validation Top-5 accuracy remains high
+(\(\approx\)89\%), further supporting improved domain generalization. However, validation loss rises from 1.64 to 2.23,
+showing that overfitting persists and perfect cross-domain generalization remains elusive. Despite this, the
+\(\sim\)15-percentage-point gain over baseline confirms MMD as a highly effective strategy for bridging the domain gap.
+Notably, MMD significantly outperforms CORAL (\(\sim\)44.4\%), demonstrating that higher-order moment matching is more
+effective for this challenging synthetic-to-real task.
 
 \subsection{ViT-B/16 with Maximum Mean Discrepancy (MMD)}
 The patch embedding and positional encoding, along with the first eight encoder layers (\texttt{Encoder Layers 0--7} in
@@ -465,23 +468,68 @@ The results of experiment is shown in Figure~\ref{fig:vitb16_mmd}.
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=\linewidth]{vitb16_mmd.png}
-	\caption{}
+	\caption{Vit-B/16 training curves with MMD alignment.}
 	\label{fig:vitb16_mmd}
 \end{figure}
 
-The ViT-B/16 with MMD achieves a final validation Top-1 accuracy of 70.76\% (with a peak of 72.16\% at epoch 14),
-representing a dramatic improvement over the baseline ViT-B/16 trained only on the source domain, which stagnated at
-approximately 58.5\% on the target domain. While training loss decreases rapidly from 0.37 to 0.07 and training
-accuracy approaches 99.5\%, validation loss remains volatile and exhibits an overall upward trend from 1.21 to 1.25,
-indicating persistent overfitting to the source distribution. Validation Top-5 accuracy plateaus around 92\%,
-suggesting the model consistently captures the correct class within its top predictions but struggles with precise
-ranking. Although the ~12-percentage-point gain over the baseline confirms the effectiveness of MMD for bridging the
-domain gap, the unstable validation loss and non-monotonic accuracy improvements suggest that further fine-tuning of
-the \(\lambda\) parameter may be necessary.
+ViT-B/16 with MMD achieves a final validation Top-1 accuracy of 70.76\% (peak 72.16\% at epoch 14), a substantial
+improvement over the ViT-B/16 baseline (58.5\%). Training loss drops rapidly from 0.37 to 0.07, and training Top-1
+accuracy approaches 99.5\%, confirming strong source-domain memorization. Validation loss fluctuates between 1.21 and
+1.41, indicating persistent overfitting. The MMD metric (green curve) decreases from 0.078 to 0.052, demonstrating
+effective domain alignment. Validation Top-5 accuracy reaches \(\approx\)93.5\%, further validating improved
+cross-domain generalization. The \(\sim\)12-percentage-point gain confirms MMD's effectiveness, but the validation
+instability and non-monotonic accuracy suggest further tuning of \(\lambda\) may be needed.
 
 \subsection{ResNet-50 with Correlation Alignment (CORAL)}
+The gradient freezing technique was applied, simialar to ResNet-50 with MMD. Feature representations for Coral are
+extracted at two stages: after \texttt{Layer3} (\texttt{feat\_l3} in Figure~\ref{fig:resnet50_coral_arch}) and before
+\texttt{AvgPool} (\texttt{feat\_fl} in Figure~\ref{fig:resnet50_coral_arch}). The two Coral values are averaged and
+scaled by \(\lambda\). The Coral scaling factor \(\lambda\) is set to \(1\).
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{resnet50_coral_arch.png}
+	\caption{Architecture diagram of ResNet50 with CORAL.}
+	\label{fig:resnet50_coral_arch}
+\end{figure}
+
+The results of experiment is shown in Figure~\ref{fig:resnet50_coral}.
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{resnet50_coral.png}
+	\caption{ResNet50 training curves with CORAL alignment.}
+	\label{fig:resnet50_coral}
+\end{figure}
+
+ResNet-50 with CORAL achieves a final validation Top-1 accuracy of 44.39\% (peak 44.61\% at epoch 9), nearly identical
+to the baseline (43.5\%). Unlike MMD's \(\sim\)15-point improvement, CORAL fails to effectively reduce the domain gap.
+Training loss drops from 0.62 to 0.008, and training Top-1 accuracy exceeds 99.7\%, confirming strong source
+memorization. Validation loss decreases gradually from 2.04 to 1.88, remaining much higher than training loss,
+indicating persistent overfitting. The CORAL metric (green curve) declines from \(\sim\)0.0032 to \(\sim\)0.0011,
+showing second-order alignment, but this does not improve cross-domain generalization. The lack of gain suggests that
+covariance alignment alone is insufficient for the large synthetic-to-real shift in VisDA-2017; higher-order moment
+matching (MMD) is far more effective.
 
 \subsection{ViT-B/16 with Correlation Alignment (CORAL)}
+The gradient freezing technique was applied, similar to ViT-B/16 with MMD. Feature representations for CORAL are
+extracted at two stages: after \texttt{Encoder Layer 8} (\texttt{feat\_l8}) and before the classification head
+(\texttt{feat\_fl}). The two CORAL values are averaged and scaled by \(\lambda\). The CORAL scaling factor \(\lambda\)
+is set to \(1\).
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{vitb16_coral.png}
+	\caption{ViT-B/16 training curves with CORAL alignment.}
+	\label{fig:vitb16_coral}
+\end{figure}
+
+ViT-B/16 with CORAL achieves a final validation Top-1 accuracy of 64.43\%, a moderate improvement over the baseline
+(58.5\%). Training loss decreases rapidly from 0.32 to 0.015, and training Top-1 accuracy approaches 99.5\%, confirming
+strong source memorization. Validation loss rises from 1.40 to a peak of 1.73 before settling at 1.60, indicating
+persistent overfitting. The CORAL metric decreases steadily from 0.00218 to 0.00135, showing second-order alignment.
+Validation Top-5 accuracy reaches \(\approx\)87.4\%. The \(\sim\)6-point gain confirms some benefit, but it is markedly
+smaller than MMD's \(\sim\)12-point gain, reinforcing that higher-order moment alignment is more effective for this
+synthetic-to-real task and that second-order covariance alignment alone is insufficient.
 
 \subsection{ResNet-50 with Domain Adversarial Training (DANN)}
 
