@@ -24,7 +24,6 @@ maxbibnames=99
 ]{biblatex}
 \addbibresource{refs.bib}
 \usepackage[colorlinks,citecolor=blue,linkcolor=blue,bookmarks=false,hypertexnames=true, urlcolor=blue]{hyperref} 
-\usepackage{indentfirst}
 \usepackage{mathtools}
 \usepackage{booktabs}
 \usepackage[flushleft]{threeparttable}
@@ -256,7 +255,7 @@ The project is divided into five sequential phases.
 \section{Methods Research \& Dataset Search}
 \subsection{Methods of Domain Adaptation}
 Several domain adaptation approaches have been proposed in computer vision, with Maximum Mean Discrepancy (MMD)
-\cite{gretton2012kernel}, CORAL \cite{sun2016deep} and DANN \cite{long2015learning} among the most widely used in
+\cite{gretton2012kernel}, CORAL \cite{sun2016deep} and DANN \cite{ganin2016domain} among the most widely used in
 classification tasks. This work focuses on the study and application of these strategies.
 
 \subsubsection{MMD}
@@ -601,6 +600,82 @@ pronounced, domain confusion. Validation Top-5 accuracy reaches 95.36\%, further
 
 The final validation Top-1 accuracy of 74.82\% surpasses both MMD (\(\sim\)70.76\%) and CORAL (\(\sim\)64.43\%),
 reaffirming that adversarial alignment achieves the highest performance for ViT-B/16 on this task.
+
+\section{Comparative Analysis}
+\label{sec:comparison}
+
+A quantitative summary of all experiments is presented in Table~\ref{tab:results_summary}. The results compare
+source-only baselines with three domain adaptation strategies across both convolutional and transformer backbones.
+
+\begin{table}[H]
+	\centering
+	\caption{Validation Top-1 accuracy (\%) on VisDA-2017 target domain.}
+	\label{tab:results_summary}
+	\begin{tabular}{lcc}
+		\toprule
+		\textbf{Method}      & \textbf{ResNet-50} & \textbf{ViT-B/16} \\
+		\midrule
+		Source-only baseline & 43.5               & 58.5              \\
+		MMD alignment        & 58.3               & 70.8              \\
+		CORAL alignment      & 44.4               & 64.4              \\
+		DANN adversarial     & 62.7               & 74.8              \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+The table reveals several insights:
+\begin{itemize}
+	\item \textbf{Architecture robustness:} ViT-B/16 consistently outperforms ResNet-50 by $12$--$15$ percentage points,
+	      both with and without adaptation, confirming the superior cross-domain generalisation of vision transformers on this task.
+	\item \textbf{Adapter effectiveness:} Adversarial training (DANN) yields the highest absolute accuracy for both backbones,
+	      closely followed by MMD. CORAL brings negligible gain for ResNet-50 and a moderate improvement for ViT-B/16, indicating
+	      that second-order statistics alignment alone is insufficient for the severe synth-to-real gap.
+	\item \textbf{Overfitting remains:} All adapted models exhibit a significant gap between training and validation performance,
+	      suggesting that further regularisation, optimizations and  data augmentation strategies may be needed.
+\end{itemize}
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+This project systematically evaluated the synthetic-to-real domain shift using the VisDA-2017 benchmark. A reproducible
+training pipeline was implemented, and baseline models (ResNet-50 and ViT-B/16) were compared against three domain
+adaptation techniques: MMD, CORAL, and DANN.
+
+Key findings include:
+\begin{enumerate}
+	\item ViT-B/16 exhibits substantially higher cross-domain accuracy than ResNet-50 in all scenarios, demonstrating its
+	      potential as a more robust backbone for domain adaptation.
+	\item Adversarial alignment (DANN) provided the largest performance boost, reaching \textbf{74.8\%} Top-1 accuracy with
+	      ViT-B/16, representing a $+16$ p.p.\ improvement over the source-only baseline.
+	\item Moment-based alignment (MMD) also proved effective, especially for ResNet-50 ($+15$ p.p.), whereas CORAL failed to
+	      close the domain gap meaningfully.
+	\item All adapted models still suffer from overfitting to the source domain, as indicated by the persistent
+	      training--validation accuracy gap and non-decreasing validation loss.
+\end{enumerate}
+
+The developed pipeline, along with all experimental configurations and pretrained checkpoints, is publicly available in
+the \href{https://github.com/DenisIndenbom/computer_vision_laboratory}{GitHub repository} and the
+\href{https://disk.360.yandex.ru/d/IaW1rYoeL61T0w}{Yandex Disk}. The results provide practical guidance for selecting
+adaptation strategies and highlight the importance of backbone choice when deploying classifiers on real-world
+user-generated data.
+
+\section{Limitations and Future Work}
+\label{sec:future}
+
+\begin{itemize}
+	\item \textbf{Degradation robustness:} The original project scope included evaluation under synthetic image degradations
+	      (blur, noise, etc.). This aspect was not realised in the current version and remains an important direction
+	      for future investigation.
+	\item \textbf{Visualisation of feature space:} t-SNE or PCA plots were planned but not generated. Visual analysis
+	      would strengthen the interpretation of feature alignment quality.
+	\item \textbf{Hyperparameter tuning:} Only a fixed set of hyperparameters ($\lambda$, learning rates, frozen layers) was used.
+	      A systematic hyperparameter search, especially for the DANN trade-off $\lambda$, could further improve results.
+	\item \textbf{Stability of adversarial training:} The observed oscillations in ViT-B/16 + DANN suggest that
+	      alternative scheduling (e.g., progressive increase of $\lambda$) may be beneficial.
+	\item \textbf{Hybrid approaches:} Combining different approaches of domain shifting approaches was not considered (e.g MMD + Coral or DANN + MMD).
+	\item \textbf{Generalisability:} Experiments were conducted on a single dataset (VisDA-2017). Extending the pipeline
+	      to other synth-to-real benchmarks (e.g., DomainNet, Office-31) would test the generality of the conclusions.
+\end{itemize}
 
 \newpage
 \printbibliography[heading=bibintoc]
